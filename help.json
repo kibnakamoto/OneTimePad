@@ -1,0 +1,19 @@
+{
+	"commands": [
+		{
+			"see": [
+				{
+					"o": "print ord_w",
+					"l": "print amount of unique indexes in ord_w",
+					"n": "print amount of iterations left",
+					"c": "print combinations"
+				}
+			],
+			"q" : "quit the endless interface loop ",
+			"exit": "exit the classical user interface",
+			"c": "continue finding more combinations (increment v)",
+			"r": "reset n, start creating combinations from the beginning"
+		}
+	]
+}
+
