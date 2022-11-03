@@ -29,7 +29,7 @@
 #include <fstream>
 
 #if __cplusplus <= 201703L
-	#error "C++ version is not required version, C++20 required"
+	#error "C++20 required"
 #endif
 
 std::shared_ptr<uint8_t> gen_priv_key(uint32_t n=16)
@@ -245,49 +245,49 @@ void test_all_prototype(uint32_t n, uint32_t ciph_len, std::vector<std::array<st
 }
 */
 
+// recursive algorithm to calculate all possible sentences, equivelent to the commented code above
+// except the loops are recursive and dynamic
 #pragma GCC diagnostic ignored "-Wreturn-type"
-// recursive loop algorithm for trying every sentence combination
-bool loop(std::vector<std::array<std::string, 2>> &possible_sentences, std::vector<uint32_t> &lens,
-		  uint32_t &n, std::string &tmp_str1, std::string &tmp_str2, uint32_t &ciph_len, uint32_t
-		  &start_ind, std::vector<std::array<std::string, 2>> &ord_w)
+bool additive(uint32_t *&sizes_progression, uint32_t sizes_len, std::array<std::string, 2>
+					 *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
+					 uint32_t *sizes, uint32_t &index)
 {
-	if(n == 0) {
-		return 1; // recursion exit code
-	} else {
-    	for(uint32_t i=start_ind;i<n;i++) {
-			if(tmp_str1.length() < ciph_len) {
-					tmp_str1 += ord_w[start_ind][0];
-			tmp_str2 += ord_w[start_ind][1];
-			start_ind = lens[i];
-			} else {
-				possible_sentences.push_back({tmp_str1, tmp_str2});
-				tmp_str1 = "";
-				tmp_str2 = "";
-
-			}
-			n--;
-        	loop(possible_sentences, lens, n, tmp_str1, tmp_str2, ciph_len, start_ind, ord_w);
-	    }
-	}
-}
-
-bool it_lens(std::vector<std::array<std::string, 2>> &possible_sentences, std::vector<uint32_t> &lens,
-		  uint32_t &i, std::string &tmp_str1, std::string &tmp_str2, uint32_t &ciph_len, uint32_t
-		  &start_ind, std::vector<std::array<std::string, 2>> &ord_w)
-{
-	if(i < lens.size()) {
-		for(uint32_t j=0;j<lens[i];j++) {
-			
-		}
-	} else {
+	if(index == sizes_len) {
 		return 1;
+	} else {
+		for(uint32_t i=0;i<sizes_progression[index];i++) {
+			possible_sentences[i][0] += ord_w[sizes[index]][0];
+			possible_sentences[i][1] += ord_w[sizes[index]][1];
+		}
+		index++;
+		additive(sizes_progression, sizes_len, possible_sentences, ord_w, sizes, index);
 	}
 }
 #pragma GCC diagnostic pop
 
+// algorithm to find all sentence combinations
+bool combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&sizes,
+				  uint32_t sizes_len, std::vector<std::array<std::string, 2>> &ord_w,
+				  uint32_t pos_sent_len) {
+	// since pos_sent_len doesn't include index 0 of sizes (because this function gets called for each thread)
+	sizes_len--;
+
+	uint32_t *sizes_progression = new uint32_t[sizes_len];
+	sizes_progression[0] = sizes[1];
+
+	// calculate how the sizes progresses through each index to calculate what indexes of ord_w
+	// should be the iterated for i,j,k...
+	for(uint32_t i=1;i<sizes_len;i++) sizes_progression[i] = sizes_progression[i-1]*sizes[i+1];
+	uint32_t index = 0;
+	additive(sizes_progression, sizes_len, possible_sentences, ord_w, sizes, index);
+	delete[] sizes_progression;
+	return 1;
+}
+
 // function for declaring pointers for calculating possible sentences using multi-threading
-inline void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t pos_sent_len, uint32_t ind,
-						  std::vector<std::array<std::string, 2>> &ord_w)
+void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t pos_sent_len, uint32_t ind,
+						  std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes,
+						  uint32_t sizes_len)
 {
 	possible_sentences_i = new std::array<std::string, 2>[pos_sent_len];
 	
@@ -297,9 +297,10 @@ inline void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uin
 		possible_sentences_i[j][0] = ord_w[ind][0];
 		possible_sentences_i[j][1] = ord_w[ind][1];
 	}
+	combinations(possible_sentences_i, sizes, sizes_len, ord_w, pos_sent_len);
 }
 
-inline void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint32_t> ord_w_ind)
+void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint32_t> ord_w_ind)
 {
 	std::cout << std::endl << "ORD_W:\t";
 	for(uint32_t i=0;i<ord_w.size();i++) {
@@ -311,8 +312,8 @@ inline void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vect
 
 int main(int argc, char *argv[])
 {
-	const std::string m1 = "thetestvector";
-	const std::string m2 = "non-sensecode";
+	const std::string m1 = "shortplain";//"thetestvector";
+	const std::string m2 = "plaintexts";//"non-sensecode";
 	const uint32_t len = m1.length(); // 13
 	std::shared_ptr<uint8_t> key = gen_priv_key(len);
 	std::cout << std::endl << "M1:\t" << hex(m1) << std::endl << "M2:\t" << hex(m2) << std::endl << "KEY:\t";
@@ -563,7 +564,7 @@ int main(int argc, char *argv[])
 						std::cout << "]" << std::endl;
 					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print n
 							std::cout << std::endl << "n:" << n << " - " << sizes_len-1-n
-									  << " amount of iterations left, type \"c\" to continue loop"
+								<< " amount of iterations left, type \"c\" to continue loop"
 									  << " and increment n, type \"r\" to reset n to 0 and re-loop";
 					} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
 						sizes = unieqe_len(ord_w_ind, sizes_len);
@@ -578,7 +579,7 @@ int main(int argc, char *argv[])
 						}
 						std::cout << std::endl << "}";
 					} else {
-						std::cout << std::endl << "Warning: see - invalid sub-command";
+						throw warning("see - invalid sub-command");
 					}
 				} else if(input == "q") {
 					std::cout << "\nare you sure you want to quit? (y/n) ";
@@ -629,14 +630,14 @@ int main(int argc, char *argv[])
 	
 	// if there is too much data to process give warning/error
 	if(pos_len_thrd > UINT32_MAX) {
-		std::cerr << "\nData size too large, process may not succeed";
+		throw warning("Data size too large, process may not succeed");
 		if(pos_len_thrd > 0xffffffffffff) { // uint48_t size
 			// in this case, there might be a need for around 200 GB of RAM
 			throw std::overflow_error("\ndata size cannot be processed without a supercomputer");
 		}
 	}
 
-	//////////////// RESOLVED, BY STRICTENING THE ELIMINATION PROCESS USING SECOND EXE FILE ////////////////
+	/* RESOLVED, BY STRICTENING THE ELIMINATION PROCESS USING CLI, and 2 other small comparision operations */
 	// 185,131,008 amount of data to be processed, how much RAM should be in use?
 	// what is the size of every possible_sentence[i]? the array has 2 13 byte values.
 	// 26*memory_to_be_processed, 4,813.4062 MB per thread, running 15 threads use 60 GB of RAM,
@@ -660,7 +661,7 @@ int main(int argc, char *argv[])
 		while (t_count != t_count%thr_count) {
 			for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
 				threads[i] = std::thread(init_pos_sent, std::ref(possible_sentences_threads[i]),
-										 pos_len_thrd, ord_w_i, std::ref(ord_w));
+										 pos_len_thrd, ord_w_i, std::ref(ord_w), sizes, sizes_len);
 				ord_w_i++;
 			}
 			for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
@@ -671,11 +672,11 @@ int main(int argc, char *argv[])
 	}
 	
 	// iterate the threads that are left (non-multiple of thr_count)
-	uint32_t cond = 0;//t_count%thr_count;
+	uint32_t cond = t_count%thr_count;
 	if(cond != 0) {
 		for(uint32_t i=pos_start_ind;i<cond;i++) {
 			threads[i] = std::thread(init_pos_sent, std::ref(possible_sentences_threads[i]),
-									 pos_len_thrd, ord_w_i, std::ref(ord_w));
+									 pos_len_thrd, ord_w_i, std::ref(ord_w), sizes, sizes_len);
 		}
 		
 		for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
@@ -718,13 +719,12 @@ int main(int argc, char *argv[])
 	for(uint64_t i=0;i<sizes_len;i++) pos_len *= sizes[i];
 	std::cout << std::endl << "possible_sentences count:\t" << pos_len
 			  << std::endl;
-	delete[] sizes;
-	for(size_t i=0;i<t_count;i++) delete[] possible_sentences_threads[i];
+	for(size_t i=0;i<sizes[0];i++) delete[] possible_sentences_threads[i];
 	delete[] possible_sentences_threads;
+	delete[] sizes;
 	return 0;
 
 	// The if the plaintext starts with a non-common letter, it doesn't get used
 	// when using random words, this elimination process deleted around 50% of the output while
 	// when using bigrams, this elimination process only deleted 2 possible bigrams
 }
-
