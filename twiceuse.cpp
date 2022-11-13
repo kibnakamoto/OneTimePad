@@ -174,14 +174,17 @@ uint32_t *unieqe_len(std::vector<uint32_t> vec, uint32_t &len) {
 	return lens;
 }
 
+// define custom run-time warnings
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 class warning : public std::exception
 {
 	private:
 	     std::string msg;
 	public:
-	     warning(const std::string& msg) {};
-	     inline const char* what() {return msg.c_str();}
+		 explicit inline warning(const std::string& msg) noexcept {};
+	     inline const char* what() noexcept {return msg.c_str();}
 };
+#pragma GCC diagnostic pop
 
 /*
 // algorithm to find n, the amount of loops
@@ -248,40 +251,51 @@ void test_all_prototype(uint32_t n, uint32_t ciph_len, std::vector<std::array<st
 // recursive algorithm to calculate all possible sentences, equivelent to the commented code above
 // except the loops are recursive and dynamic
 #pragma GCC diagnostic ignored "-Wreturn-type"
-bool additive(uint32_t *&sizes_progression, uint32_t sizes_len, std::array<std::string, 2>
-					 *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
-					 uint32_t *sizes, uint32_t &index)
+bool additive(uint32_t sizes_len, std::array<std::string, 2>
+			  *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
+			  uint32_t *&sizes_copy, uint32_t initial_sizes_len, uint64_t &index)
 {
-	if(index == sizes_len) {
+	if(sizes_len == 1) {
 		return 1;
 	} else {
-		for(uint32_t i=0;i<sizes_progression[index];i++) {
-			possible_sentences[i][0] += ord_w[sizes[index]][0];
-			possible_sentences[i][1] += ord_w[sizes[index]][1];
+		// calculate length to iterate over
+		uint64_t prev_index = index;
+		index/=sizes_copy[0];
+		prev_index/=index;
+		for(uint64_t i=0,j=0;i<index;i++,j++) { // j should inc by prev_index every time
+			possible_sentences[i][0] += ord_w[j][0];
+			possible_sentences[i][1] += ord_w[j][1];
 		}
-		index++;
-		additive(sizes_progression, sizes_len, possible_sentences, ord_w, sizes, index);
+
+
+		// delete first value from sizes_copy
+		sizes_len--;
+		uint32_t *__sizes_copy = new uint32_t[sizes_len];
+		for(uint32_t i=0;i<sizes_len;i++) __sizes_copy[i] = sizes_copy[i+1];
+		sizes_copy = __sizes_copy;
+		delete[] __sizes_copy;
+		additive(sizes_len, possible_sentences, ord_w, sizes_copy, initial_sizes_len, index);
 	}
 }
 #pragma GCC diagnostic pop
 
 // algorithm to find all sentence combinations
-bool combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&sizes,
-				  uint32_t sizes_len, std::vector<std::array<std::string, 2>> &ord_w,
-				  uint32_t pos_sent_len) {
-	// since pos_sent_len doesn't include index 0 of sizes (because this function gets called for each thread)
-	sizes_len--;
+void combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&sizes,
+				  uint32_t sizes_len, std::vector<std::array<std::string, 2>> &ord_w) {
 
-	uint32_t *sizes_progression = new uint32_t[sizes_len];
-	sizes_progression[0] = sizes[1];
+	// create a copy of sizes for modifying in additive recursive algorithm
+	uint32_t *sizes_copy = sizes;
+	uint32_t sub_sizes_len = sizes_len;
+	uint64_t index = 1; 
+
+	// calculate amount of combinations in sizes[1... #sizes]
+	for(uint32_t i=1;i<sizes_len;i++) {
+		index *= sizes[i];
+	}
 
 	// calculate how the sizes progresses through each index to calculate what indexes of ord_w
 	// should be the iterated for i,j,k...
-	for(uint32_t i=1;i<sizes_len;i++) sizes_progression[i] = sizes_progression[i-1]*sizes[i+1];
-	uint32_t index = 0;
-	additive(sizes_progression, sizes_len, possible_sentences, ord_w, sizes, index);
-	delete[] sizes_progression;
-	return 1;
+	additive(sub_sizes_len, possible_sentences, ord_w, sizes_copy, sizes_len, index);
 }
 
 // function for declaring pointers for calculating possible sentences using multi-threading
@@ -297,7 +311,7 @@ void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t p
 		possible_sentences_i[j][0] = ord_w[ind][0];
 		possible_sentences_i[j][1] = ord_w[ind][1];
 	}
-	combinations(possible_sentences_i, sizes, sizes_len, ord_w, pos_sent_len);
+	combinations(possible_sentences_i, sizes, sizes_len, ord_w);
 }
 
 void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint32_t> ord_w_ind)
@@ -523,7 +537,8 @@ int main(int argc, char *argv[])
 	
 	// CLI for removing certain values based on how much they make sense to the user after
 	// concatination of ord_w elements
-	while((bool)argv[1][0]) {
+	const bool args = argc == 2 and (bool)argv[1][0];
+	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
 		size_t n = 0;
 		for(uint32_t v=0;v<sizes[n];v++) {
