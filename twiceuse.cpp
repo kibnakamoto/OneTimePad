@@ -32,6 +32,9 @@
 	#error "C++20 required"
 #endif
 
+// TODO: use ansi escape code for all output. e.g.
+// std::cout << "\n\033[95;1;23mwarning: \033[0m\033[95;23;5m" << msg << "\033[0m";
+
 std::shared_ptr<uint8_t> gen_priv_key(uint32_t n=16)
 {
 	// generate n byte private key
@@ -175,16 +178,9 @@ uint32_t *unieqe_len(std::vector<uint32_t> vec, uint32_t &len) {
 }
 
 // define custom run-time warnings
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-class warning : public std::exception
-{
-	private:
-	     std::string msg;
-	public:
-		 explicit inline warning(const std::string& msg) noexcept {};
-	     inline const char* what() noexcept {return msg.c_str();}
-};
-#pragma GCC diagnostic pop
+void warning(const std::string msg) {
+    std::cout << "\n\033[95;1;23mwarning: \033[0m\033[95;23;5m" << msg << "\033[0m";
+}
 
 /*
 // algorithm to find n, the amount of loops
@@ -258,13 +254,12 @@ bool additive(uint32_t sizes_len, std::array<std::string, 2>
 	if(sizes_len == 1) {
 		return 1;
 	} else {
-		// calculate length to iterate over
-		uint64_t prev_index = index;
-		index/=sizes_copy[0];
-		prev_index/=index;
-		for(uint64_t i=0,j=0;i<index;i++,j++) { // j should inc by prev_index every time
+		// calculate possible_sentences
+		uint64_t j=0;
+		for(uint64_t i=0;i<index;i++) { // j should inc by prev_index every time
 			possible_sentences[i][0] += ord_w[j][0];
 			possible_sentences[i][1] += ord_w[j][1];
+			j = j + j%4 == 0; // increment j every 4 iterations
 		}
 
 
@@ -537,7 +532,7 @@ int main(int argc, char *argv[])
 	
 	// CLI for removing certain values based on how much they make sense to the user after
 	// concatination of ord_w elements
-	const bool args = argc == 2 and (bool)argv[1][0];
+	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '1'
 	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
 		size_t n = 0;
@@ -594,7 +589,9 @@ int main(int argc, char *argv[])
 						}
 						std::cout << std::endl << "}";
 					} else {
-						throw warning("see - invalid sub-command");
+						std::stringstream ss;
+					   ss << "see: " << input << ": invalid subcommand";
+						warning(ss.str());
 					}
 				} else if(input == "q") {
 					std::cout << "\nare you sure you want to quit? (y/n) ";
@@ -645,7 +642,7 @@ int main(int argc, char *argv[])
 	
 	// if there is too much data to process give warning/error
 	if(pos_len_thrd > UINT32_MAX) {
-		throw warning("Data size too large, process may not succeed");
+		warning("Data size too large, process may not succeed");
 		if(pos_len_thrd > 0xffffffffffff) { // uint48_t size
 			// in this case, there might be a need for around 200 GB of RAM
 			throw std::overflow_error("\ndata size cannot be processed without a supercomputer");
@@ -693,7 +690,6 @@ int main(int argc, char *argv[])
 			threads[i] = std::thread(init_pos_sent, std::ref(possible_sentences_threads[i]),
 									 pos_len_thrd, ord_w_i, std::ref(ord_w), sizes, sizes_len);
 		}
-		
 		for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
 		t_count -= cond;
 	}
@@ -711,19 +707,20 @@ int main(int argc, char *argv[])
 		std::cout << "[" << possible_bigrams_ind[i] << ": {" << possible_bigrams[i][0] << ", " 
 				  << possible_bigrams[i][1]  << "}] ";
 	}
-	std::cout << std::endl << "POSSIBLE_BIGRAMS:\t" << std::endl << "possible_bigrams count:\t"
-			  << std::dec << possible_bigrams.size() << std::endl << "POSSIBLE_TRIGRAMS:\t";
+	std::cout << std::endl << "POSSIBLE_BIGRAMS:\t" << std::endl
+			  << "\x1b[31mpossible_bigrams count:\t\x1b[0m\033[37;1m"
+			  << std::dec << possible_bigrams.size() << "\033[0m" << std::endl << "POSSIBLE_TRIGRAMS:\t";
 	for(uint32_t i=0;i<possible_trigrams.size();i++) {
 		std::cout << "[" << possible_trigrams_ind[i] << ": {" << possible_trigrams[i][0] << ", "
 				  << possible_trigrams[i][1] << "}] ";
 	}
-	std::cout << std::endl << "possible_trigrams count\t" << possible_trigrams.size() << std::endl
-			  << "ORD_W:\t";
+	std::cout << std::endl << "\x1b[31mpossible_trigrams count\t\x1b[0m\033[37;1m"
+			  << possible_trigrams.size() << "\033[0m" << std::endl << "ORD_W:\t";
 	for(uint32_t i=0;i<ord_w.size();i++) {
 		std::cout << "[" << ord_w_ind[i] << ": {" << ord_w[i][0] << ", "
 				  << ord_w[i][1] << "}] ";
 	}
-	std::cout << std::endl << "ord_w count:\t" << ord_w.size() << std::endl
+	std::cout << std::endl << "\x1b[31mord_w count:\t\x1b[0m\033[37;1m" << ord_w.size() << "\033[0m" << std::endl
 			  << "POSSIBLE_SENTENCES_THREADS:\n";
 	for(uint32_t i=0;i<t_count;i++) {
 		for(uint32_t j=0;j<pos_len_thrd;j++)
@@ -732,8 +729,8 @@ int main(int argc, char *argv[])
 	}
 	uint64_t pos_len = 1;
 	for(uint64_t i=0;i<sizes_len;i++) pos_len *= sizes[i];
-	std::cout << std::endl << "possible_sentences count:\t" << pos_len
-			  << std::endl;
+	std::cout << std::endl << "\x1b[31mpossible_sentences count:\t\x1b[0m\033[37;1m" << pos_len
+			  << "\033[0m" << std::endl;
 	for(size_t i=0;i<sizes[0];i++) delete[] possible_sentences_threads[i];
 	delete[] possible_sentences_threads;
 	delete[] sizes;
@@ -743,3 +740,4 @@ int main(int argc, char *argv[])
 	// when using random words, this elimination process deleted around 50% of the output while
 	// when using bigrams, this elimination process only deleted 2 possible bigrams
 }
+
