@@ -701,31 +701,34 @@ int main(int argc, char *argv[])
 	// loop(possible_sentences[i], ord_w_ind, ord_w_size, tmp_str1, tmp_str2, len, start_i, ord_w);
 	// it_lens(possible_sentences_threads, ord_w_ind, start_i, tmp_str1, tmp_str2, len, start_i, ord_w);
 	// LENS IS NOT EQUAL TO ORD_W_IND
-	
-	std::cout << std::endl << "POSSIBLE_BIGRAMS:\t";
+	 ///////////////////////////////////////// NICE BLUE COLOR: 38;2;16;124;224m
+	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_bigrams.size();i++) {
-		std::cout << "[" << possible_bigrams_ind[i] << ": {" << possible_bigrams[i][0] << ", " 
-				  << possible_bigrams[i][1]  << "}] ";
+		std::cout << "\033[1;38;2;158;0;0m[\033[0m\x1b[37;23m" << possible_bigrams_ind[i]
+				  << "\x1b[0m\033[1;37;5m:\033[0m \x1b[1;38;2;183;180;188m{\x1b[0m"
+				  << possible_bigrams[i][0] << "\x1b[1;38;2;183;180;188m,\x1b[0m " 
+				  << possible_bigrams[i][1]  << "\x1b[1;38;2;183;180;188m}\x1b[0m\033[1;38;2;158;0;0m]\033[0m ";
 	}
-	std::cout << std::endl << "POSSIBLE_BIGRAMS:\t" << std::endl
+	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m" << std::endl
 			  << "\x1b[31mpossible_bigrams count:\t\x1b[0m\033[37;1m"
-			  << std::dec << possible_bigrams.size() << "\033[0m" << std::endl << "POSSIBLE_TRIGRAMS:\t";
+			  << std::dec << possible_bigrams.size() << "\033[0m" << std::endl << "\033[32;1mPOSSIBLE_TRIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_trigrams.size();i++) {
-		std::cout << "[" << possible_trigrams_ind[i] << ": {" << possible_trigrams[i][0] << ", "
-				  << possible_trigrams[i][1] << "}] ";
+		std::cout << "\033[1;38;2;158;0;0m[\033[0m\x1b[37;23m" << possible_trigrams_ind[i]
+			      << "\x1b[0m\033[1;37;5m:\033[0m {" << possible_trigrams[i][0] << ", "
+				  << possible_trigrams[i][1] << "}\033[1;38;2;158;0;0m]\033[0m ";
 	}
 	std::cout << std::endl << "\x1b[31mpossible_trigrams count\t\x1b[0m\033[37;1m"
-			  << possible_trigrams.size() << "\033[0m" << std::endl << "ORD_W:\t";
+			  << possible_trigrams.size() << "\033[0m" << std::endl << "\033[32;1mORD_W:\t\033[0m";
 	for(uint32_t i=0;i<ord_w.size();i++) {
-		std::cout << "[" << ord_w_ind[i] << ": {" << ord_w[i][0] << ", "
-				  << ord_w[i][1] << "}] ";
+		std::cout << "\033[1;38;2;158;0;0m[\033[0m\x1b[37;23m" << ord_w_ind[i] << "\x1b[0m\033[1;37;5m:\033[0m {" << ord_w[i][0] << ", "
+				  << ord_w[i][1] << "}\033[1;38;2;158;0;0m]\033[0m ";
 	}
 	std::cout << std::endl << "\x1b[31mord_w count:\t\x1b[0m\033[37;1m" << ord_w.size() << "\033[0m" << std::endl
-			  << "POSSIBLE_SENTENCES_THREADS:\n";
+			  << "\033[32;1mPOSSIBLE_SENTENCES_THREADS:\n\033[0m";
 	for(uint32_t i=0;i<t_count;i++) {
 		for(uint32_t j=0;j<pos_len_thrd;j++)
-			std::cout << "[" << possible_sentences_threads[i][j][0] << ",\n"
-					  << possible_sentences_threads[i][j][1] << "]" << std::endl;
+			std::cout << "\033[1;38;2;158;0;0m[\033[0m\x1b[37;23m" << possible_sentences_threads[i][j][0] << ",\n"
+					  << possible_sentences_threads[i][j][1] << "\033[1;38;2;158;0;0m]\033[0m" << std::endl;
 	}
 	uint64_t pos_len = 1;
 	for(uint64_t i=0;i<sizes_len;i++) pos_len *= sizes[i];
