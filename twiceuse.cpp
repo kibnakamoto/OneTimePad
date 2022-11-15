@@ -32,6 +32,8 @@
 	#error "C++20 required"
 #endif
 
+// Code is designed for linux and unix.
+// required libraries: jq
 // TODO: use ansi escape code for all output. e.g.
 // std::cout << "\n\033[95;1;23mwarning: \033[0m\033[95;23;5m" << msg << "\033[0m";
 
@@ -179,7 +181,7 @@ uint32_t *unieqe_len(std::vector<uint32_t> vec, uint32_t &len) {
 
 // define custom run-time warnings
 void warning(const std::string msg) {
-    std::cout << "\n\033[95;1;23mwarning: \033[0m\033[95;23;5m" << msg << "\033[0m";
+    std::cout << "\n\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m";
 }
 
 /*
@@ -321,6 +323,13 @@ void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint
 
 int main(int argc, char *argv[])
 {
+	// format of commonly used strings
+	const std::string open_sq_bracket = "\033[1;38;2;158;0;0m[\033[0m";
+	const std::string closed_sq_bracket = "\033[1;38;2;158;0;0m]\033[0m ";
+	const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
+	const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
+	const std::string white_colon = "\033[1;37;5m:\033[0m ";
+	const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
 	const std::string m1 = "shortplain";//"thetestvector";
 	const std::string m2 = "plaintexts";//"non-sensecode";
 	const uint32_t len = m1.length(); // 13
@@ -532,24 +541,32 @@ int main(int argc, char *argv[])
 	
 	// CLI for removing certain values based on how much they make sense to the user after
 	// concatination of ord_w elements
-	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '1'
+	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
 	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
 		size_t n = 0;
 		for(uint32_t v=0;v<sizes[n];v++) {
 			std::array<std::string, 2> *comb = new std::array<std::string, 2>[sizes[n]];
 			for(uint32_t j=sizes[n];j<sizes[n]+sizes[n+1];j++) {
+				std::string format = "\033[38;2;16;124;224";
+				if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
+				else format += "m";
 				comb[v][0] = ord_w[v][0] + ord_w[j][0];
 				comb[v][1] = ord_w[v][1] + ord_w[j][1];
-				std::cout << "\ncombination = [" << comb[v][0] << " : " << comb[v][1]
-						   << "\t-1:" << v << "\t-2:" << j << "]";
+				std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
+						  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
+						  << "\t\x1b[37m-1:\x1b[0m" << format << v
+						  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
+						  << "\033[0m" << closed_sq_bracket;
 			}
 			while(true) {
 				std::string input = "";
 				std::cout << std::endl << "input index to remove or to see certain values:\t";
 				std::getline(std::cin, input);
-				if(input == "" or input.find("help") != std::string::npos) {
-					system("cat help.json");
+				if(input.find("help") != std::string::npos) {
+					system("jq . help.json"); // pretty print json
+				} else if(input == "") {
+					std::cout << "\b" << std::flush;
 				} else if(std::all_of(input.begin(),input.end(), [](char inp) {return isdigit(inp);})) {
 					uint32_t digit = static_cast<uint32_t>(std::stoul(input));
 					if(digit < ord_w.size()) {
@@ -590,7 +607,7 @@ int main(int argc, char *argv[])
 						std::cout << std::endl << "}";
 					} else {
 						std::stringstream ss;
-					   ss << "see: " << input << ": invalid subcommand";
+					   ss << input << ": invalid subcommand";
 						warning(ss.str());
 					}
 				} else if(input == "q") {
@@ -613,14 +630,14 @@ int main(int argc, char *argv[])
 				} else if(input == "r") {
 					n = 0;
 				} else {
-					system("cat help.json");
+					system("jq . help.json"); // pretty print json
 				}
 			}
 			first_for_loop:
 				continue;
 		}
 		loop1:
-			std::cout << "exit? (y/n) ";
+			std::cout << "\033[31;1mexit?\033[0m (\033[5;38;2;16;255;22my\033[0m/\x1b[38;2;158;0;0;1mn\x1b[0m) ";
 			char verify;
 			std::cin >> verify;
 			if (verify == 'y') {
@@ -702,41 +719,37 @@ int main(int argc, char *argv[])
 	// it_lens(possible_sentences_threads, ord_w_ind, start_i, tmp_str1, tmp_str2, len, start_i, ord_w);
 	// LENS IS NOT EQUAL TO ORD_W_IND
 	///////////////////////////////////////// NICE BLUE COLOR: 38;2;16;124;224m
-	const std::string open_sq_bracket = "\033[1;38;2;158;0;0m[\033[0m";
-	const std::string closed_sq_bracket = "\033[1;38;2;158;0;0m]\033[0m ";
-	const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
-	const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
-	const std::string white_colon = "\033[1;37;5m:\033[0m ";
-	const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
 	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_bigrams.size();i++) {
 		std::cout << open_sq_bracket << "\x1b[37;23m" << possible_bigrams_ind[i]
 				  << "\x1b[0m" << white_colon << open_curly_bracket
-				  << possible_bigrams[i][0] << white_comma
-				  << possible_bigrams[i][1]  << closed_curly_bracket << closed_sq_bracket;
+				  << "\033[3m" << possible_bigrams[i][0] << "\033[0m" << white_comma
+				  << "\x1b[3m" << possible_bigrams[i][1] << "\x1b[0m" << closed_curly_bracket
+				  << closed_sq_bracket;
 	}
 	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m" << std::endl
 			  << "\x1b[31mpossible_bigrams count:\t\x1b[0m\033[37;1m"
 			  << std::dec << possible_bigrams.size() << "\033[0m" << std::endl << "\033[32;1mPOSSIBLE_TRIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_trigrams.size();i++) {
 		std::cout << open_sq_bracket << "\x1b[37;23m" << possible_trigrams_ind[i]
-			      << "\x1b[0m" << white_colon << open_curly_bracket << possible_trigrams[i][0]
-				  << white_comma << possible_trigrams[i][1] << closed_curly_bracket << closed_sq_bracket;
+			      << "\x1b[0m" << white_colon << open_curly_bracket << "\033[3m"
+				  << possible_trigrams[i][0] << "\033[0m"
+				  << white_comma << "\033[3m" << possible_trigrams[i][1] << "\033[0m" << closed_curly_bracket << closed_sq_bracket;
 	}
 	std::cout << std::endl << "\x1b[31mpossible_trigrams count\t\x1b[0m\033[37;1m"
 			  << possible_trigrams.size() << "\033[0m" << std::endl << "\033[32;1mORD_W:\t\033[0m";
 	for(uint32_t i=0;i<ord_w.size();i++) {
 		std::cout << open_sq_bracket << "\x1b[37;23m" << ord_w_ind[i] << "\x1b[0m" << white_colon
-				  << open_curly_bracket << ord_w[i][0] << white_comma << ord_w[i][1]
-				  << closed_curly_bracket << closed_sq_bracket;
+				  << open_curly_bracket << "\x1b[3m" << ord_w[i][0] << "\x1b[0m" << white_comma
+				  << "\033[3m" << ord_w[i][1] << "\033[0m" << closed_curly_bracket << closed_sq_bracket;
 	}
 	std::cout << std::endl << "\x1b[31mord_w count:\t\x1b[0m\033[37;1m" << ord_w.size() << "\033[0m" << std::endl
 			  << "\033[32;1mPOSSIBLE_SENTENCES_THREADS:\n\033[0m";
 	for(uint32_t i=0;i<t_count;i++) {
-		for(uint32_t j=0;j<pos_len_thrd;j++)
-			std::cout << open_sq_bracket << "\x1b[37;23m" << possible_sentences_threads[i][j][0]
-					  << white_comma << "\n" << possible_sentences_threads[i][j][1]
-					  << closed_sq_bracket << std::endl;
+		for(uint32_t j=0;j<pos_len_thrd;j++)// "\x1b[3m"
+			std::cout << open_sq_bracket << "\x1b[37;23;3m" << possible_sentences_threads[i][j][0]
+					  << "\x1b[0m" << white_comma << "\n\033[3m" << possible_sentences_threads[i][j][1]
+					  << "\033[0m" << closed_sq_bracket << std::endl;
 	}
 	uint64_t pos_len = 1;
 	for(uint64_t i=0;i<sizes_len;i++) pos_len *= sizes[i];
