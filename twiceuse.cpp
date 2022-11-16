@@ -615,7 +615,10 @@ int main(int argc, char *argv[])
 					char verify;
 					std::cin >> verify;
 					if (verify == 'y') {
+						std::cout << "\033[4A\x1b[4K\n\033[4D\033[2K";
 						goto loop1;
+					} else {
+						std::cout << "\033[4A\x1b[4K\n\033[4D\033[2K";
 					}
 				} else if(input == "exit") {
 					goto stop;
@@ -641,8 +644,10 @@ int main(int argc, char *argv[])
 			char verify;
 			std::cin >> verify;
 			if (verify == 'y') {
+				std::cout << "\x1b[1D\x1b[2K";
 				break;
 			} else {
+				std::cout << "\x1b[1A\x1b[2K";
 				continue;
 			}
 	}
@@ -745,12 +750,12 @@ int main(int argc, char *argv[])
 	}
 	std::cout << std::endl << "\x1b[31mord_w count:\t\x1b[0m\033[37;1m" << ord_w.size() << "\033[0m" << std::endl
 			  << "\033[32;1mPOSSIBLE_SENTENCES_THREADS:\n\033[0m";
-	for(uint32_t i=0;i<t_count;i++) {
-		for(uint32_t j=0;j<pos_len_thrd;j++)// "\x1b[3m"
-			std::cout << open_sq_bracket << "\x1b[37;23;3m" << possible_sentences_threads[i][j][0]
-					  << "\x1b[0m" << white_comma << "\n\033[3m" << possible_sentences_threads[i][j][1]
-					  << "\033[0m" << closed_sq_bracket << std::endl;
-	}
+//	for(uint32_t i=0;i<sizes[0];i++) {
+//		for(uint32_t j=0;j<pos_len_thrd;j++)
+//			std::cout << open_sq_bracket << "\x1b[37;23;3m" << possible_sentences_threads[i][j][0]
+//					  << "\x1b[0m" << white_comma << "\n\033[3m" << possible_sentences_threads[i][j][1]
+//					  << "\033[0m" << closed_sq_bracket << std::endl;
+//	}
 	uint64_t pos_len = 1;
 	for(uint64_t i=0;i<sizes_len;i++) pos_len *= sizes[i];
 	std::cout << std::endl << "\x1b[31mpossible_sentences count:\t\x1b[0m\033[37;1m" << pos_len
