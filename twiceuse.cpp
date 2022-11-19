@@ -248,6 +248,7 @@ void test_all_prototype(uint32_t n, uint32_t ciph_len, std::vector<std::array<st
 
 // recursive algorithm to calculate all possible sentences, equivelent to the commented code above
 // except the loops are recursive and dynamic
+// NOT WORKING
 #pragma GCC diagnostic ignored "-Wreturn-type"
 bool additive(uint32_t sizes_len, std::array<std::string, 2>
 			  *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
@@ -313,12 +314,19 @@ void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t p
 
 void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint32_t> ord_w_ind)
 {
-	std::cout << std::endl << "ORD_W:\t";
+	const std::string open_sq_bracket = "\033[1;38;2;158;0;0m[\033[0m";
+	const std::string closed_sq_bracket = "\033[1;38;2;158;0;0m]\033[0m ";
+	const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
+	const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
+	const std::string white_colon = "\033[1;37;5m:\033[0m ";
+	const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
+	std::cout << std::endl << "\033[32;1mORD_W:\t\033[0m";
 	for(uint32_t i=0;i<ord_w.size();i++) {
-		std::cout << "(i:" << i << " - [" << ord_w_ind[i] << ": {" << ord_w[i][0] << ", "
-				  << ord_w[i][1] << "}]) ";
+		std::cout << open_sq_bracket << "\x1b[37;23m" << ord_w_ind[i] << "\x1b[0m" << white_colon
+				  << open_curly_bracket << "\x1b[3m" << ord_w[i][0] << "\x1b[0m" << white_comma
+				  << "\033[3m" << ord_w[i][1] << "\033[0m" << closed_curly_bracket << closed_sq_bracket;
 	}
-	std::cout << std::endl << "ord_w count:\t" << ord_w.size() << std::endl;
+	std::cout << std::endl << "\x1b[31mord_w count:\t\x1b[0m\033[37;1m" << ord_w.size() << "\033[0m" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -539,15 +547,19 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	sizes = unieqe_len(ord_w_ind, sizes_len);
+
 	// CLI for removing certain values based on how much they make sense to the user after
 	// concatination of ord_w elements
 	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
 	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
 		size_t n = 0;
+		uint64_t sizes_till_n = sizes[0];
+		std::cout << std::endl << sizes_till_n << std::endl;
 		for(uint32_t v=0;v<sizes[n];v++) {
 			std::array<std::string, 2> *comb = new std::array<std::string, 2>[sizes[n]];
-			for(uint32_t j=sizes[n];j<sizes[n]+sizes[n+1];j++) {
+			for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[n+1];j++) {
 				std::string format = "\033[38;2;16;124;224";
 				if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 				else format += "m";
@@ -581,37 +593,46 @@ int main(int argc, char *argv[])
 						print_ord_w(ord_w, ord_w_ind);
 					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'l';})) { // print sizes
 						sizes = unieqe_len(ord_w_ind, sizes_len);
-						std::cout << "\nsizes:\t[";
+						std::cout << "\nsizes:\t" << open_sq_bracket;
 						for(uint32_t i=0;i<sizes_len;i++) {
 							std::cout << sizes[i];
 							if(i < sizes_len-1) {
 								std::cout << ", ";
 							}
 						}
-						std::cout << "]" << std::endl;
+						std::cout << closed_sq_bracket << std::endl;
 					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print n
 							std::cout << std::endl << "n:" << n << " - " << sizes_len-1-n
 								<< " amount of iterations left, type \"c\" to continue loop"
 									  << " and increment n, type \"r\" to reset n to 0 and re-loop";
 					} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
 						sizes = unieqe_len(ord_w_ind, sizes_len);
-						std::cout << std::endl << "combinations:\t{\n";
+						std::cout << std::endl << "\x1b[38;2;16;124;224mcombinations:\x1b[0m\t"
+								  << open_curly_bracket << "\n";
 
 						// re-calculate comb since ord_w might be updated
-						for(uint32_t j=sizes[n];j<sizes[n]+sizes[n+1];j++) {
+						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[n+1];j++) {
+							std::string format = "\033[38;2;16;124;224";
+							if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
+							else format += "m";
 							comb[v][0] = ord_w[v][0] + ord_w[j][0];
 							comb[v][1] = ord_w[v][1] + ord_w[j][1];
-							std::cout << "\ncombination = [" << comb[v][0] << " : " << comb[v][1]
-									  << "\t-1:" << v << "\t-2:" << j << "]";
+							std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
+									  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
+									  << "\t\x1b[37m-1:\x1b[0m" << format << v
+									  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
+									  << "\033[0m" << closed_sq_bracket;
 						}
-						std::cout << std::endl << "}";
+						std::cout << std::endl << closed_curly_bracket;
 					} else {
 						std::stringstream ss;
-					   ss << input << ": invalid subcommand";
-						warning(ss.str());
+					    ss << "\x1b[21;31;1merror\x1b[0m\033[31;1m:\033[m \033[9;1m" << input
+						   << "\033[0m\033[1;38;2;128;0;0;5m:\033[0m invalid sub-command";
+						std::cout << ss.str();
 					}
 				} else if(input == "q") {
-					std::cout << "\nare you sure you want to quit? (y/n) ";
+					std::cout << "\n\x1b[1;38;2;255;16;22mare you sure you want to quit?\x1b[0m "
+							  << "(\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m) ";
 					char verify;
 					std::cin >> verify;
 					if (verify == 'y') {
@@ -624,6 +645,7 @@ int main(int argc, char *argv[])
 					goto stop;
 				} else if(input == "c") { // continue the loop, by increasing n
 					if(n<sizes_len-1) {
+						sizes_till_n += sizes[n];
 						n++;
 					} else {
 						std::cout << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit";
@@ -632,10 +654,12 @@ int main(int argc, char *argv[])
 					goto first_for_loop;
 				} else if(input == "r") {
 					n = 0;
+					sizes_till_n = 0;
 				} else {
 					system("jq . help.json"); // pretty print json
 				}
 			}
+
 			first_for_loop:
 				continue;
 		}
