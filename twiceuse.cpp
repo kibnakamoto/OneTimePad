@@ -189,7 +189,7 @@ uint32_t *unieqe_len(std::vector<uint32_t> vec, uint32_t &len) {
 }
 
 // define custom run-time warnings
-void warning(const std::string msg) {
+void inline warning(const std::string msg) {
     std::cout << "\n\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m";
 }
 
@@ -490,8 +490,8 @@ int main(int argc, char *argv[])
 	sizes = unieqe_len(ord_w_ind, sizes_len);
 
 	// CLI for removing certain values based on how much they make sense to the user after
-	// concatination of ord_w elements
-	// MAJOR TODO: n is index of ord_w not index of sizes. RE-IMPLEMENT THIS TO CHECK IF SIZES INDEX SHOULD INCREMENT OR NOT
+	// concatination of ord_w elements. This is mostly to decrease the amount of threads running
+	// so that any device can run the code.
 	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
 	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
 								  << open_curly_bracket << "\n";
 
 						// re-calculate comb since ord_w might be updated
-						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[n+1];j++) {
+						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
 							std::string format = "\033[38;2;16;124;224";
 							if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 							else format += "m";
