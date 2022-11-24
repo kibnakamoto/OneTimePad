@@ -37,6 +37,15 @@
 // TODO: use ansi escape code for all output. e.g.
 // std::cout << "\n\033[95;1;23mwarning: \033[0m\033[95;23;5m" << msg << "\033[0m";
 
+// global constants
+// format of commonly used strings
+const std::string open_sq_bracket = "\033[1;38;2;158;0;0m[\033[0m";
+const std::string closed_sq_bracket = "\033[1;38;2;158;0;0m]\033[0m ";
+const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
+const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
+const std::string white_colon = "\033[1;37;5m:\033[0m ";
+const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
+
 std::shared_ptr<uint8_t> gen_priv_key(uint32_t n=16)
 {
 	// generate n byte private key
@@ -184,71 +193,9 @@ void warning(const std::string msg) {
     std::cout << "\n\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m";
 }
 
-/*
-// algorithm to find n, the amount of loops
-// indexes are indexes from the nested loops of test_all_prototype()
-uint32_t find_n(std::vector<uint32_t> indexes, uint32_t ciph_len) {
-	uint32_t tmp = 0, n = 0;
-	for(uint32_t i=0;indexes.size();i++) {
-		if (tmp <= ciph_len) {
-			tmp += ord_w[indexes[i]][0].length();
-		} else {
-			n = i;
-			break;
-		}
-	}
-	return n;
-}
-
-// do not run, this is for reference to better understand the loop function defined ahead
-// variable len calculated in unieqe_len() is the number of nested loops
-void test_all_prototype(uint32_t n, uint32_t ciph_len, std::vector<std::array<std::string, 2>> &possible_sentences) {
-	possible_sentences.reserve(n*ord_w.size());
-	// TODO: the starting values should be lens[0], lens[1]... otherwise, it will create sentences
-	// using 0th index + 0th index
-	
-	// calculate initial value of n
-	std::vector<uint32_t> initial_indexes.reserve(lens.size());
-	for(uint32_t i=0;i<lens.size();i++) {
-		initial_indexes.push_back(lens[i]);
-	}
-	n = find_n(initial_indexes, ciph_len);
-	
-	for(uint32_t i=0;i<ord_w_ind.size();i++) {
-		for(uint32_t j=1;j<ord_w_ind.size();j++) {
-			for(uint32_t k=2;k<ord_w_ind.size();k++) {
-				for(uint32_t x=3;x<ord_w_ind.size();x++) {
-					for(uint32_t z=4;z<ord_w_ind.size();z++) {
-						for(uint32_t b=5;b<ord_w_ind.size();b++) { // if n = 7, the amount of ord_w[...] should add to length of ciphertext
-							for(uint32_t f=6;f<ord_w_ind.size();f++) {
-								std::string add = ord_w[i][0] + ord_w[j][0] + ord_w[k][0] + 
-											  	  ord_w[x][0] + ord_w[z][0] + ord_w[b][0] + ord_w[f][0];
-								std::array<std::string,2> arr = {add, ord_w[i][1] + ord_w[j][1] +
-																 ord_w[k][1] + ord_w[x][1] +
-																 ord_w[z][1] + ord_w[b][1] + ord_w[f][1]};
-								possible_sentences.push_back(arr);
-								
-								// re-calculate n for the next iteration
-								// this needs to happen because not all the lengths of plaintexts are the same
-								std::vector<uint32_t> indexes{i,j,k,x,z,b,f};
-								n = find_n(indexes, ciph_len);
-								
-								// use indexes vector for re-looping from indexes[...]+=1;
-								// plus/minus the difference of n loops
-								
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-*/
-
 // recursive algorithm to calculate all possible sentences, equivelent to the commented code above
 // except the loops are recursive and dynamic
-// NOT WORKING
+// TODO: Fix the algorithm
 #pragma GCC diagnostic ignored "-Wreturn-type"
 bool additive(uint32_t sizes_len, std::array<std::string, 2>
 			  *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
@@ -259,10 +206,11 @@ bool additive(uint32_t sizes_len, std::array<std::string, 2>
 	} else {
 		// calculate possible_sentences
 		uint64_t j=0;
+
 		for(uint64_t i=0;i<index;i++) { // j should inc by prev_index every time
 			possible_sentences[i][0] += ord_w[j][0];
 			possible_sentences[i][1] += ord_w[j][1];
-			j = j + j%4 == 0; // increment j every 4 iterations
+			j = j + j%sizes_copy[0] == 0; // sizes[0] changes each iteration of recursive algorithm
 		}
 
 
@@ -273,18 +221,21 @@ bool additive(uint32_t sizes_len, std::array<std::string, 2>
 		sizes_copy = __sizes_copy;
 		delete[] __sizes_copy;
 		additive(sizes_len, possible_sentences, ord_w, sizes_copy, initial_sizes_len, index);
+		for(uint32_t i=0;i<sizes_len;i++) std::cout << std::endl << sizes_copy[i] << "\n";
 	}
 }
 #pragma GCC diagnostic pop
 
-// algorithm to find all sentence combinations
+// helper algorithm to find all sentence combinations
 void combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&sizes,
 				  uint32_t sizes_len, std::vector<std::array<std::string, 2>> &ord_w) {
 
 	// create a copy of sizes for modifying in additive recursive algorithm
+    const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";                    
 	uint32_t *sizes_copy = sizes;
 	uint32_t sub_sizes_len = sizes_len;
-	uint64_t index = 1; 
+	uint64_t index = 1;
+	uint64_t index_ev = sizes[1]; // index evolution
 
 	// calculate amount of combinations in sizes[1... #sizes]
 	for(uint32_t i=1;i<sizes_len;i++) {
@@ -296,7 +247,7 @@ void combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&si
 	additive(sub_sizes_len, possible_sentences, ord_w, sizes_copy, sizes_len, index);
 }
 
-// function for declaring pointers for calculating possible sentences using multi-threading
+// function for calculating possible sentences using multi-threading, this function is for single-thread
 void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t pos_sent_len, uint32_t ind,
 						  std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes,
 						  uint32_t sizes_len)
@@ -314,30 +265,19 @@ void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t p
 
 void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint32_t> ord_w_ind)
 {
-	const std::string open_sq_bracket = "\033[1;38;2;158;0;0m[\033[0m";
-	const std::string closed_sq_bracket = "\033[1;38;2;158;0;0m]\033[0m ";
-	const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
-	const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
-	const std::string white_colon = "\033[1;37;5m:\033[0m ";
-	const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
 	std::cout << std::endl << "\033[32;1mORD_W:\t\033[0m";
 	for(uint32_t i=0;i<ord_w.size();i++) {
-		std::cout << open_sq_bracket << "\x1b[37;23m" << ord_w_ind[i] << "\x1b[0m" << white_colon
+		std::cout << "\x1b[38;2;16;124;224m(\x1b[0mi:\x1b[38;2;16;124;224m" << i << "\x1b[0m - " 
+				  << open_sq_bracket << "\x1b[37;23m" << ord_w_ind[i] << "\x1b[0m" << white_colon
 				  << open_curly_bracket << "\x1b[3m" << ord_w[i][0] << "\x1b[0m" << white_comma
-				  << "\033[3m" << ord_w[i][1] << "\033[0m" << closed_curly_bracket << closed_sq_bracket;
+				  << "\033[3m" << ord_w[i][1] << "\033[0m" << closed_curly_bracket
+				  << closed_sq_bracket << "\b\x1b[38;2;16;124;224m)\x1b[0m  ";
 	}
 	std::cout << std::endl << "\x1b[31mord_w count:\t\x1b[0m\033[37;1m" << ord_w.size() << "\033[0m" << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
-	// format of commonly used strings
-	const std::string open_sq_bracket = "\033[1;38;2;158;0;0m[\033[0m";
-	const std::string closed_sq_bracket = "\033[1;38;2;158;0;0m]\033[0m ";
-	const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
-	const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
-	const std::string white_colon = "\033[1;37;5m:\033[0m ";
-	const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
 	const std::string m1 = "shortplain";//"thetestvector";
 	const std::string m2 = "plaintexts";//"non-sensecode";
 	const uint32_t len = m1.length(); // 13
@@ -551,15 +491,16 @@ int main(int argc, char *argv[])
 
 	// CLI for removing certain values based on how much they make sense to the user after
 	// concatination of ord_w elements
+	// MAJOR TODO: n is index of ord_w not index of sizes. RE-IMPLEMENT THIS TO CHECK IF SIZES INDEX SHOULD INCREMENT OR NOT
 	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
 	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
 		size_t n = 0;
+		uint32_t sizes_index = 0;
 		uint64_t sizes_till_n = sizes[0];
-		std::cout << std::endl << sizes_till_n << std::endl;
-		for(uint32_t v=0;v<sizes[n];v++) {
+		for(uint32_t v=sizes_till_n-sizes[0];v<sizes_till_n+sizes[sizes_index]-sizes[0];v++) {
 			std::array<std::string, 2> *comb = new std::array<std::string, 2>[sizes[n]];
-			for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[n+1];j++) {
+			for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
 				std::string format = "\033[38;2;16;124;224";
 				if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 				else format += "m";
@@ -602,7 +543,7 @@ int main(int argc, char *argv[])
 						}
 						std::cout << closed_sq_bracket << std::endl;
 					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print n
-							std::cout << std::endl << "n:" << n << " - " << sizes_len-1-n
+							std::cout << std::endl << "n:" << n << " - " << sizes[0]-n
 								<< " amount of iterations left, type \"c\" to continue loop"
 									  << " and increment n, type \"r\" to reset n to 0 and re-loop";
 					} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
@@ -643,18 +584,24 @@ int main(int argc, char *argv[])
 					}
 				} else if(input == "exit") {
 					goto stop;
-				} else if(input == "c") { // continue the loop, by increasing n
-					if(n<sizes_len-1) {
-						sizes_till_n += sizes[n];
+				} else if(input == "c") { // continue the loop, by increasing n and dependants of n
+					if(n<ord_w.size()-sizes[0]) {
+						uint32_t tmp_size = 0;
+						for(uint32_t s=0;s<sizes_index;s++) tmp_size += sizes[s];
+						if(tmp_size > n) {
+							sizes_index++;
+						 	sizes_till_n += sizes[sizes_index];
+						};
 						n++;
 					} else {
-						std::cout << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit";
+						std::cout << std::flush
+								  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
 					}
 					delete[] comb;
 					goto first_for_loop;
 				} else if(input == "r") {
 					n = 0;
-					sizes_till_n = 0;
+					sizes_till_n = sizes[0];
 				} else {
 					system("jq . help.json"); // pretty print json
 				}
@@ -740,14 +687,6 @@ int main(int argc, char *argv[])
 		t_count -= cond;
 	}
 	
-	//std::string tmp_str1 = "";
-	//std::string tmp_str2 = "";
-	//uint32_t start_i = 1;
-	//uint32_t ord_w_size = ord_w.size();
-	// loop(possible_sentences[i], ord_w_ind, ord_w_size, tmp_str1, tmp_str2, len, start_i, ord_w);
-	// it_lens(possible_sentences_threads, ord_w_ind, start_i, tmp_str1, tmp_str2, len, start_i, ord_w);
-	// LENS IS NOT EQUAL TO ORD_W_IND
-	///////////////////////////////////////// NICE BLUE COLOR: 38;2;16;124;224m
 	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_bigrams.size();i++) {
 		std::cout << open_sq_bracket << "\x1b[37;23m" << possible_bigrams_ind[i]
