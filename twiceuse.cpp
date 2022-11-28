@@ -34,8 +34,6 @@
 
 // Code is designed for linux and unix.
 // required libraries: jq
-// TODO: use ansi escape code for all output. e.g.
-// std::cout << "\n\033[95;1;23mwarning: \033[0m\033[95;23;5m" << msg << "\033[0m";
 
 // global constants
 // format of commonly used strings
@@ -221,7 +219,6 @@ bool additive(uint32_t sizes_len, std::array<std::string, 2>
 		sizes_copy = __sizes_copy;
 		delete[] __sizes_copy;
 		additive(sizes_len, possible_sentences, ord_w, sizes_copy, initial_sizes_len, index);
-		for(uint32_t i=0;i<sizes_len;i++) std::cout << std::endl << sizes_copy[i] << "\n";
 	}
 }
 #pragma GCC diagnostic pop
@@ -495,11 +492,11 @@ int main(int argc, char *argv[])
 	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
 	while(args) {
 		print_ord_w(ord_w, ord_w_ind);
-		size_t n = 0;
+		uint32_t v = 0;
 		uint32_t sizes_index = 0;
 		uint64_t sizes_till_n = sizes[0];
-		for(uint32_t v=sizes_till_n-sizes[0];v<sizes_till_n+sizes[sizes_index]-sizes[0];v++) {
-			std::array<std::string, 2> *comb = new std::array<std::string, 2>[sizes[n]];
+		while(v < ord_w.size()-sizes[sizes_len-1]) {
+			std::array<std::string, 2> *comb = new std::array<std::string, 2>[ord_w.size()-1];
 			for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
 				std::string format = "\033[38;2;16;124;224";
 				if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
@@ -525,6 +522,7 @@ int main(int argc, char *argv[])
 					if(digit < ord_w.size()) {
 						ord_w.erase(ord_w.begin()+digit);
 						ord_w_ind.erase(ord_w_ind.begin()+digit);
+						sizes = unieqe_len(ord_w_ind, sizes_len);
 					} else {
 						std::cout << std::endl << "input too large, has to be smaller than "
 								  << ord_w.size();
@@ -542,8 +540,8 @@ int main(int argc, char *argv[])
 							}
 						}
 						std::cout << closed_sq_bracket << std::endl;
-					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print n
-							std::cout << std::endl << "n:" << n << " - " << sizes[0]-n
+					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print v
+							std::cout << std::endl << "n:" << v << " - " << ord_w.size()-1-v
 								<< " amount of iterations left, type \"c\" to continue loop"
 									  << " and increment n, type \"r\" to reset n to 0 and re-loop";
 					} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
@@ -585,22 +583,28 @@ int main(int argc, char *argv[])
 				} else if(input == "exit") {
 					goto stop;
 				} else if(input == "c") { // continue the loop, by increasing n and dependants of n
-					if(n<ord_w.size()-sizes[0]) {
-						uint32_t tmp_size = 0;
-						for(uint32_t s=0;s<sizes_index;s++) tmp_size += sizes[s];
-						if(tmp_size > n) {
-							sizes_index++;
-						 	sizes_till_n += sizes[sizes_index];
-						};
-						n++;
+					if(v<ord_w.size()-sizes[sizes_len-1]) {
+						// calculate sizes[i] for loop j for combinations
+						uint32_t old_sizes_index = sizes_index;
+						sizes_index = ord_w_ind[v];
+						if (sizes_index != old_sizes_index) { // if sizes_index updated
+							sizes_till_n += sizes[sizes_index];
+						}
+						//uint32_t tmp_size = 0;
+						//for(uint32_t s=0;s<sizes_index;s++) tmp_size += sizes[s];
+						//if(v > tmp_size) { // use ord_w_ind[v] for  finding sizes_index
+						//	sizes_index++;
+						// 	sizes_till_n += sizes[sizes_index];
+						//};
 					} else {
 						std::cout << std::flush
 								  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
 					}
 					delete[] comb;
+					v++;
 					goto first_for_loop;
 				} else if(input == "r") {
-					n = 0;
+					v = 0;
 					sizes_till_n = sizes[0];
 				} else {
 					system("jq . help.json"); // pretty print json
