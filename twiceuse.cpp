@@ -18,7 +18,6 @@
 #include <string>
 #include <iomanip>
 #include <sstream>
-#include <map>
 #include <array>
 #include <vector>
 #include <set>
@@ -27,12 +26,24 @@
 #include <algorithm>
 #include <stdexcept>
 #include <fstream>
+#include <signal.h>
 
-#if __cplusplus <= 201703L
-	#error "C++20 required"
-#endif
+#if defined(__unix__) || defined(__linux__) || defined(__MACH__)
+	#if __cplusplus <= 201703L
+		#error "\x1b[31;1mC++20 required\x1b[0m"
+	#endif /* __cplusplus <= 201703L */
+#else
+	#error "!defined(__unix__) || !defined(__linux__) || !defined(__MACH__): program doesn't support other OSs"
+	#if	 __cplusplus <= 201703L
+		#error "C++20 required"
+	#endif /* __cplusplus <= 201703L */
+#endif /* if OS == unix or linux or mac os */
 
-// Code is designed for linux and unix.
+#if defined(_WIN32)
+#error "specifically NOT designed for windows, use linux or unix or darwin(MAC OS) instead"
+#endif /* if OS == Windows */
+
+
 // required libraries: jq
 
 // global constants
@@ -43,6 +54,7 @@ const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";
 const std::string open_curly_bracket = "\x1b[1;38;2;183;180;188m{\x1b[0m";
 const std::string white_colon = "\033[1;37;5m:\033[0m ";
 const std::string white_comma = "\x1b[1;38;2;183;180;188m,\x1b[0m ";
+bool catched_sigint = 0;
 
 std::shared_ptr<uint8_t> gen_priv_key(uint32_t n=16)
 {
@@ -54,6 +66,11 @@ std::shared_ptr<uint8_t> gen_priv_key(uint32_t n=16)
     for(uint32_t c=0;c<n;c++) key.get()[c] = distr(generator);
 	return key;
 }
+
+// handle termination signals
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+inline void handler(sig_atomic_t sig) { catched_sigint = 1; }
+#pragma GCC diagnostic pop
 
 std::string hex(std::string inp)
 {
@@ -197,7 +214,7 @@ void inline warning(const std::string msg) {
 #pragma GCC diagnostic ignored "-Wreturn-type"
 bool additive(uint32_t sizes_len, std::array<std::string, 2>
 			  *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
-			  uint32_t *&sizes_copy, uint32_t initial_sizes_len, uint64_t &index)
+			  uint32_t *&sizes_copy, uint64_t &prev_index, uint64_t &index)
 {
 	if(sizes_len == 1) {
 		return 1;
@@ -208,17 +225,21 @@ bool additive(uint32_t sizes_len, std::array<std::string, 2>
 		for(uint64_t i=0;i<index;i++) { // j should inc by prev_index every time
 			possible_sentences[i][0] += ord_w[j][0];
 			possible_sentences[i][1] += ord_w[j][1];
-			j = j + j%sizes_copy[0] == 0; // sizes[0] changes each iteration of recursive algorithm
+			j = i == prev_index/index ? j+prev_index/index : j; // sizes[0] changes each iteration of recursive algorithm
 		}
 
 
 		// delete first value from sizes_copy
+		prev_index = index;
 		sizes_len--;
 		uint32_t *__sizes_copy = new uint32_t[sizes_len];
-		for(uint32_t i=0;i<sizes_len;i++) __sizes_copy[i] = sizes_copy[i+1];
+		for(uint32_t i=1;i<sizes_len+1;i++) __sizes_copy[i-1] = sizes_copy[i];
 		sizes_copy = __sizes_copy;
-		delete[] __sizes_copy;
-		additive(sizes_len, possible_sentences, ord_w, sizes_copy, initial_sizes_len, index);
+		index = 1;
+		for(uint32_t i=0;i<sizes_len;i++) {
+			index *= sizes_copy[i];
+		}
+		additive(sizes_len, possible_sentences, ord_w, sizes_copy, prev_index, index);
 	}
 }
 #pragma GCC diagnostic pop
@@ -228,20 +249,20 @@ void combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&si
 				  uint32_t sizes_len, std::vector<std::array<std::string, 2>> &ord_w) {
 
 	// create a copy of sizes for modifying in additive recursive algorithm
-    const std::string closed_curly_bracket = "\x1b[1;38;2;183;180;188m}\x1b[0m";                    
 	uint32_t *sizes_copy = sizes;
 	uint32_t sub_sizes_len = sizes_len;
 	uint64_t index = 1;
-	uint64_t index_ev = sizes[1]; // index evolution
+	uint64_t prev_index = 1;
 
 	// calculate amount of combinations in sizes[1... #sizes]
 	for(uint32_t i=1;i<sizes_len;i++) {
 		index *= sizes[i];
 	}
+	prev_index *= sizes[0];
 
 	// calculate how the sizes progresses through each index to calculate what indexes of ord_w
 	// should be the iterated for i,j,k...
-	additive(sub_sizes_len, possible_sentences, ord_w, sizes_copy, sizes_len, index);
+	additive(sub_sizes_len, possible_sentences, ord_w, sizes_copy, prev_index, index);
 }
 
 // function for calculating possible sentences using multi-threading, this function is for single-thread
@@ -484,6 +505,8 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	///////////////// PROBLEM WITH sizes[5] = sizes_till_n updated in UI is caused by how c command is defined later while 
+	// print comes first.
 	sizes = unieqe_len(ord_w_ind, sizes_len);
 
 	// CLI for removing certain values based on how much they make sense to the user after
@@ -497,26 +520,40 @@ int main(int argc, char *argv[])
 		uint64_t sizes_till_n = sizes[0];
 		while(v < ord_w.size()-sizes[sizes_len-1]) {
 			std::array<std::string, 2> *comb = new std::array<std::string, 2>[ord_w.size()-1];
-			for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
-				std::string format = "\033[38;2;16;124;224";
-				if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
-				else format += "m";
-				comb[v][0] = ord_w[v][0] + ord_w[j][0];
-				comb[v][1] = ord_w[v][1] + ord_w[j][1];
-				std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
-						  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
-						  << "\t\x1b[37m-1:\x1b[0m" << format << v
-						  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
-						  << "\033[0m" << closed_sq_bracket;
-			}
 			while(true) {
 				std::string input = "";
 				std::cout << std::endl << "input index to remove or to see certain values:\t";
+				signal(SIGINT, handler);
+				if (catched_sigint) goto tried_quit;
 				std::getline(std::cin, input);
 				if(input.find("help") != std::string::npos) {
 					system("jq . help.json"); // pretty print json
 				} else if(input == "") {
 					std::cout << "\b" << std::flush;
+				} else if(input == "c") { // continue the loop, by increasing n and dependants of n
+					if(v<ord_w.size()-sizes[sizes_len-1]) {
+						// calculate sizes[i] for loop j for combinations
+						sizes_index = ord_w_ind[v];
+						if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index+1];
+					} else {
+						std::cout << std::flush
+								  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
+					}
+					delete[] comb;
+					v++;
+					for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
+						std::string format = "\033[38;2;16;124;224";
+						if(j%2 == 0) format += ";5m"; // print format for making every 2 values blink
+						else format += "m";
+						comb[v][0] = ord_w[v][0] + ord_w[j][0];
+						comb[v][1] = ord_w[v][1] + ord_w[j][1];
+						std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
+								  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
+								  << "\t\x1b[37m-1:\x1b[0m" << format << v
+								  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
+								  << "\033[0m" << closed_sq_bracket;
+					}
+					goto first_for_loop;
 				} else if(std::all_of(input.begin(),input.end(), [](char inp) {return isdigit(inp);})) {
 					uint32_t digit = static_cast<uint32_t>(std::stoul(input));
 					if(digit < ord_w.size()) {
@@ -570,6 +607,8 @@ int main(int argc, char *argv[])
 						std::cout << ss.str();
 					}
 				} else if(input == "q") {
+					tried_quit:
+					catched_sigint = 0;
 					std::cout << "\n\x1b[1;38;2;255;16;22mare you sure you want to quit?\x1b[0m "
 							  << "(\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m) ";
 					char verify;
@@ -582,27 +621,6 @@ int main(int argc, char *argv[])
 					}
 				} else if(input == "exit") {
 					goto stop;
-				} else if(input == "c") { // continue the loop, by increasing n and dependants of n
-					if(v<ord_w.size()-sizes[sizes_len-1]) {
-						// calculate sizes[i] for loop j for combinations
-						uint32_t old_sizes_index = sizes_index;
-						sizes_index = ord_w_ind[v];
-						if (sizes_index != old_sizes_index) { // if sizes_index updated
-							sizes_till_n += sizes[sizes_index];
-						}
-						//uint32_t tmp_size = 0;
-						//for(uint32_t s=0;s<sizes_index;s++) tmp_size += sizes[s];
-						//if(v > tmp_size) { // use ord_w_ind[v] for  finding sizes_index
-						//	sizes_index++;
-						// 	sizes_till_n += sizes[sizes_index];
-						//};
-					} else {
-						std::cout << std::flush
-								  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
-					}
-					delete[] comb;
-					v++;
-					goto first_for_loop;
 				} else if(input == "r") {
 					v = 0;
 					sizes_till_n = sizes[0];
