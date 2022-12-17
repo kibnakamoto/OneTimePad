@@ -1,2 +1,8 @@
-// ignore executable
+// executable
 twice
+
+// shell compile
+compile.sh
+
+// valgrind log
+valgrind.out
