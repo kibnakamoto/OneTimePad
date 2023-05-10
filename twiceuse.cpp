@@ -29,9 +29,6 @@
 #include <filesystem>
 #include <signal.h>
 
-// used in function init_pos_sent as a divisor by available memory to find how many segments the ram should be in
-#define MEMORY_SEGMENT_SIZE_DIVISOR 100
-
 #if defined(__unix__) || defined(__linux__) || defined(__MACH__)
 	#if __cplusplus <= 201703L
 		#error "\x1b[31;1mC++20 required\x1b[0m"
@@ -212,71 +209,8 @@ void inline warning(const std::string msg) {
     std::cout << std::endl << "\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m" << std::endl;
 }
 
-// recursive algorithm to calculate all possible sentences, equivelent to the commented code above
-// except the loops are recursive and dynamic
-// TODO: Fix the algorithm
-#pragma GCC diagnostic ignored "-Wreturn-type"
-bool additive(uint32_t sizes_len, std::array<std::string, 2>
-			  *&possible_sentences, std::vector<std::array<std::string, 2>> &ord_w,
-			  uint32_t *&sizes_copy, uint64_t &prev_index, uint64_t &index)
-{
-	if(sizes_len == 1) {
-		return 1;
-	} else {
-		// calculate possible_sentences
-		uint64_t j=0;
-
-		std::cout << std::endl << index;
-		for(uint64_t i=0;i<index;i++) { // j should inc by prev_index every time
-			// possible sentences index not working because not considering that because of the memory, it needs to be put into smaller segments. Maybe move other things into smaller segments too
-		//	possible_sentences[i][0] += ord_w[j][0];
-		//	possible_sentences[i][1] += ord_w[j][1];
-			j += i == prev_index/index ? j+prev_index/index : j; // sizes[0] changes each iteration of recursive algorithm
-		}
-
-
-		// delete first value from sizes_copy
-		prev_index = index;
-		sizes_len--;
-		sizes_copy++;
-		//uint32_t *__sizes_copy = new uint32_t[sizes_len];
-		//for(uint32_t i=1;i<sizes_len+1;i++) __sizes_copy[i-1] = sizes_copy[i];
-		//sizes_copy = __sizes_copy;
-		//index = 1;
-		//for(uint32_t i=0;i<sizes_len;i++) {
-		//	index *= sizes_copy[i];
-		//}
-		additive(sizes_len, possible_sentences, ord_w, sizes_copy, prev_index, index);
-	}
-}
-#pragma GCC diagnostic pop
-
-// helper algorithm to find all sentence combinations
-void combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&sizes,
-				  uint32_t sizes_len, std::vector<std::array<std::string, 2>> &ord_w) {
-
-	// create a copy of sizes for modifying in additive recursive algorithm
-	uint32_t *sizes_copy = sizes;
-	uint32_t sub_sizes_len = sizes_len;
-	uint64_t index = 1;
-	uint64_t prev_index = 1;
-	static unsigned int iterator = 0;
-
-	// calculate amount of combinations in sizes[i... #sizes]
-	for(uint32_t i=iterator;i<sizes_len;i++) {
-		index *= sizes[i];
-	}
-	prev_index *= sizes[0];
-
-	iterator++;
-	// calculate how the sizes progresses through each index to calculate what indexes of ord_w
-	// should be the iterated for i,j,k...
-	additive(sub_sizes_len, possible_sentences, ord_w, sizes_copy, prev_index, index);
-}
-
 void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w)
 {
-	thread_num--;
 	std::ofstream file("py" + std::to_string(thread_num) + ".py");
 	file << "ord_w0 = [";
 	for(uint32_t i=0;i<ord_w.size();i++) {
@@ -315,47 +249,16 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 }
 		
 // function for calculating possible sentences using multi-threading, this function is for single-thread
-void init_pos_sent(std::array<std::string, 2> *&possible_sentences_i, uint32_t pos_sent_len, uint32_t ind,
- 				   std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes, uint32_t sizes_len,
-				   const uint32_t sentence_len=13, size_t t_count=1)
+void init_pos_sent(std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes, uint32_t sizes_len,
+				   size_t t_count=1)
 {
 	///////////// THE ram_available/MEMORY_SEGMENT_SIZE_DIVISOR DETERMINES THE MEMORY SEGMENTATION SIZE. INCREASE TO USE MORE RAM
 	uint64_t ram_available = ((uint64_t)sysconf (_SC_PHYS_PAGES) * sysconf (_SC_PAGESIZE))/t_count; // ram available per thread, leave half a gig per thread
-	uint64_t mem_seg_size = pos_sent_len*sentence_len; // memory segment size, initialized to byte size of total sentence length
-	while(mem_seg_size >= ram_available/MEMORY_SEGMENT_SIZE_DIVISOR) { // how many segments should it be in
-		mem_seg_size/=2;
-	}
-	std::cout << "\nMemory Segment Size (Size of Memory Used Per Thread):\t" << mem_seg_size << "B\t\tRam Available Per Thread:\t" << ram_available << "B\n";
-	std::ofstream file;
-	std::string file_path = "possible_sentences";
-	std::filesystem::path tmp{file_path};
-	unsigned int num = 0;
-	while(std::filesystem::exists(tmp)) {
-		file_path += std::to_string(num);
-		num++;
-	}
-	file_path += ".txt";
-	unsigned int it_count = ram_available%mem_seg_size ? ram_available/mem_seg_size+1 : ram_available/mem_seg_size; // how many segments should the sentences be calculated in
-	for(unsigned int i=0;i<it_count;i++) {
-		possible_sentences_i = new std::array<std::string, 2>[mem_seg_size];
-
-		// add all the possible_sentences first syllable
-		// every first syllable gets their own thread if applicable 
-		//for(uint32_t j=mem_seg_size*i*2;j<mem_seg_size*i*2+mem_seg_size;j++) {
-		//	possible_sentences_i[j][0] = ord_w[ind][0];
-		//	possible_sentences_i[j][1] = ord_w[ind][1];
-		//}
-		//combinations(possible_sentences_i, sizes, sizes_len, ord_w);
-		static uint32_t thr_num = 0;
-		thr_num++;
-		try_combinations(sizes, sizes_len, thr_num, ord_w);
-		file.open(file_path);
-		for(uint32_t j=mem_seg_size*i*2;j<mem_seg_size*i*2+mem_seg_size;j++)
-			file << possible_sentences_i[j][0] << ":" << possible_sentences_i[j][1] << "\n";
-		file.close();
-		std::cout << "\nclosed\n";
-		delete[] possible_sentences_i;
-	}
+	static uint32_t thr_num = 0;
+	std::cout << "\nRam Available Per Thread:\t" << ram_available << "B\n";
+	try_combinations(sizes, sizes_len, thr_num, ord_w);
+	thr_num++;
+	std::cout << "\nfinished thread " << thr_num;
 }
 
 void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint32_t> ord_w_ind)
@@ -782,7 +685,6 @@ int main(int argc, char *argv[])
 	// t_count equals the amount of threads required and in use, calculated as the amount of starting sylables if applicable
 	// first calculate
 	uint32_t t_count = sizes[0];
-	std::array<std::string, 2> **possible_sentences_threads = new std::array<std::string, 2> *[sizes[0]];
 	std::vector<std::thread> threads(t_count);
 	size_t thr_count = std::thread::hardware_concurrency()-5;
 
@@ -793,8 +695,7 @@ int main(int argc, char *argv[])
 	if(t_count >= thr_count) {
 		while (t_count != t_count%thr_count) {
 			for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
-				threads[i] = std::thread(init_pos_sent, std::ref(possible_sentences_threads[i]),
-										 pos_len_thrd, ord_w_i, std::ref(ord_w), sizes, sizes_len, len, t_count);
+				threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
 				ord_w_i++;
 			}
 			for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
@@ -808,20 +709,11 @@ int main(int argc, char *argv[])
 	uint32_t cond = t_count%thr_count;
 	if(cond != 0) {
 		for(uint32_t i=pos_start_ind;i<cond;i++) {
-			threads[i] = std::thread(init_pos_sent, std::ref(possible_sentences_threads[i]),
-									 pos_len_thrd, ord_w_i, std::ref(ord_w), sizes, sizes_len, len, t_count);
+			threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
 		}
 		for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
 		t_count -= cond;
 	}
-	
-//	for(uint32_t i=0;i<sizes[0];i++) { // don't print possible sentences, save them to a file since it might be too large
-//		for(uint32_t j=0;j<pos_len_thrd;j++)
-//			std::cout << open_sq_bracket << "\x1b[37;23;3m" << possible_sentences_threads[i][j][0]
-//					  << "\x1b[0m" << white_comma << "\n\033[3m" << possible_sentences_threads[i][j][1]
-//					  << "\033[0m" << closed_sq_bracket << std::endl;
-//	}
-	delete[] possible_sentences_threads;
 	delete[] sizes;
 	return 0;
 
