@@ -276,6 +276,7 @@ void combinations(std::array<std::string, 2> *&possible_sentences, uint32_t *&si
 
 void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w)
 {
+	thread_num--;
 	std::ofstream file("py" + std::to_string(thread_num) + ".py");
 	file << "ord_w0 = [";
 	for(uint32_t i=0;i<ord_w.size();i++) {
@@ -287,7 +288,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		file << "\""  << ord_w[i][1] << "\"";
 		if(i != ord_w.size()-1) file << ", ";
 	}
-	file << "]\nf = open(\"output.txt\", \"w\")\n";
+	file << "]\nf = open(\"output" << std::to_string(thread_num) << ".txt\", \"w\")\n";
 	std::string tabs = "";
 	uint32_t num = sizes[0];
 
@@ -307,7 +308,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		file << "ord_w1[i" << i << "]";
 		if(i < sizes_len-1) file << " + ";
 	}
-	file << tabs << "\nf.write(tmp + \"\\n\")\n";
+	file << "\n" << tabs << "f.write(tmp + \"\\n\")\n";
 	file << tabs << "print(tmp)";
 	file << "\nfile.close()\n";
 	system((std::string("python3 py") + std::to_string(thread_num) + std::string(".py")).c_str());
