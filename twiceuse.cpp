@@ -209,7 +209,7 @@ void inline warning(const std::string msg) {
     std::cout << std::endl << "\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m" << std::endl;
 }
 
-void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w)
+void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w, uint32_t len)
 {
 	std::ofstream file("py" + std::to_string(thread_num) + ".py");
 	file << "ord_w0 = [";
@@ -224,40 +224,40 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 	}
 	file << "]\nf = open(\"output" << std::to_string(thread_num) << ".txt\", \"w\")\n";
 	std::string tabs = "";
-	uint32_t num = sizes[0];
+	uint32_t num = 0;
 
 	// write the nested loops
-	for(uint32_t i=0;i<sizes_len;i++) {
-		file << tabs << "for i" << i << " in range(" << num << ", " << num+sizes[i] << "):\n";
+	for(uint32_t i=1;i<sizes_len;i++) {
+		file << tabs << "for i" << i-1 << " in range(" << num << ", " << num+sizes[i] << "):\n";
 		if (i >= 1) num += sizes[i];
 		tabs += "\t";
 	}
 	file << tabs << "tmp = ";
-	for(uint32_t i=0;i<sizes_len;i++) {
+	for(uint32_t i=0;i<sizes_len-1;i++) {
 		file << "ord_w0[i" << i << "]";
-		if(i < sizes_len-1) file << " + ";
+		if(i < sizes_len-2) file << " + ";
 	}
 	file << " + \" : \" + ";
-	for(uint32_t i=0;i<sizes_len;i++) {
+	for(uint32_t i=0;i<sizes_len-1;i++) {
 		file << "ord_w1[i" << i << "]";
-		if(i < sizes_len-1) file << " + ";
+		if(i < sizes_len-2) file << " + ";
 	}
+	file << "\n" << tabs << "if len(tmp) == " << len << ":\n";
+	tabs += "\t";
 	file << "\n" << tabs << "f.write(tmp + \"\\n\")\n";
 	file << tabs << "print(tmp)";
-	file << "\nfile.close()\n";
+	file << "\nf.close()\n";
+	file.close();
 	system((std::string("python3 py") + std::to_string(thread_num) + std::string(".py")).c_str());
 }
 		
 // function for calculating possible sentences using multi-threading, this function is for single-thread
 void init_pos_sent(std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes, uint32_t sizes_len,
-				   size_t t_count=1)
+				   uint32_t len, uint32_t thr_num)
 {
-	///////////// THE ram_available/MEMORY_SEGMENT_SIZE_DIVISOR DETERMINES THE MEMORY SEGMENTATION SIZE. INCREASE TO USE MORE RAM
-	uint64_t ram_available = ((uint64_t)sysconf (_SC_PHYS_PAGES) * sysconf (_SC_PAGESIZE))/t_count; // ram available per thread, leave half a gig per thread
-	static uint32_t thr_num = 0;
-	std::cout << "\nRam Available Per Thread:\t" << ram_available << "B\n";
-	try_combinations(sizes, sizes_len, thr_num, ord_w);
-	thr_num++;
+	uint64_t ram_available = ((uint64_t)sysconf (_SC_PHYS_PAGES) * sysconf (_SC_PAGESIZE));
+	std::cout << "\nTotal Ram Available:\t" << ram_available << "B\n";
+	try_combinations(sizes, sizes_len, thr_num, ord_w, len);
 	std::cout << "\nfinished thread " << thr_num;
 }
 
@@ -699,7 +699,7 @@ int main(int argc, char *argv[])
 		if(t_count >= thr_count) {
 			while (t_count != t_count%thr_count) {
 				for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
-					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
+					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
 					ord_w_i++;
 				}
 				for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
@@ -713,15 +713,15 @@ int main(int argc, char *argv[])
 		uint32_t cond = t_count%thr_count;
 		if(cond != 0) {
 			for(uint32_t i=pos_start_ind;i<cond;i++) {
-				threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
+				threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
 			}
 			for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
 			t_count -= cond;
 		}
-		delete[] sizes;
 	} else {
 		std::cout << "\nfinished cracking the OneTimePad Ciphertexts\n";
 	}
+	delete[] sizes;
 	return 0;
 
 	// The if the plaintext starts with a non-common letter, it doesn't get used
