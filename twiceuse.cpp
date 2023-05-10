@@ -681,40 +681,47 @@ int main(int argc, char *argv[])
 	std::cout << std::endl << "\x1b[31mpossible_sentences count:\t\x1b[0m\033[37;1m" << pos_len
 			  << "\033[0m" << std::endl;
 
-	// allocate possible_sentences pointer, on multi-threads
-	// t_count equals the amount of threads required and in use, calculated as the amount of starting sylables if applicable
-	// first calculate
-	uint32_t t_count = sizes[0];
-	std::vector<std::thread> threads(t_count);
-	size_t thr_count = std::thread::hardware_concurrency()-5;
+	std::string ask;
+	std::cout << "\n\x1b[1;38;2;255;16;22mDo You Want to Generate All the Possible Sentences?\x1b[0m (\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m)";
+	std::cin >> ask;
+	if(ask[0] == 'y') {
+		// allocate possible_sentences pointer, on multi-threads
+		// t_count equals the amount of threads required and in use, calculated as the amount of starting sylables if applicable
+		// first calculate
+		uint32_t t_count = sizes[0];
+		std::vector<std::thread> threads(t_count);
+		size_t thr_count = std::thread::hardware_concurrency()-5;
 
-	// iterate through all threads, will work even if the amount of threads is larger than the amount
-	// of threads
-	uint32_t pos_start_ind = 0;
-	uint32_t ord_w_i = 0;
-	if(t_count >= thr_count) {
-		while (t_count != t_count%thr_count) {
-			for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
-				threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
-				ord_w_i++;
+		// iterate through all threads, will work even if the amount of threads is larger than the amount
+		// of threads
+		uint32_t pos_start_ind = 0;
+		uint32_t ord_w_i = 0;
+		if(t_count >= thr_count) {
+			while (t_count != t_count%thr_count) {
+				for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
+					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
+					ord_w_i++;
+				}
+				for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
+
+				t_count -= thr_count;
+				pos_start_ind += thr_count;
 			}
-			for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
-
-			t_count -= thr_count;
-			pos_start_ind += thr_count;
 		}
-	}
-	
-	// iterate the threads that are left (non-multiple of thr_count)
-	uint32_t cond = t_count%thr_count;
-	if(cond != 0) {
-		for(uint32_t i=pos_start_ind;i<cond;i++) {
-			threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
+		
+		// iterate the threads that are left (non-multiple of thr_count)
+		uint32_t cond = t_count%thr_count;
+		if(cond != 0) {
+			for(uint32_t i=pos_start_ind;i<cond;i++) {
+				threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, t_count);
+			}
+			for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
+			t_count -= cond;
 		}
-		for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
-		t_count -= cond;
+		delete[] sizes;
+	} else {
+		std::cout << "\nfinished cracking the OneTimePad Ciphertexts\n";
 	}
-	delete[] sizes;
 	return 0;
 
 	// The if the plaintext starts with a non-common letter, it doesn't get used
