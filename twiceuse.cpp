@@ -209,6 +209,7 @@ void inline warning(const std::string msg) {
     std::cout << std::endl << "\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m" << std::endl;
 }
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w, uint32_t len)
 {
 	std::ofstream file("py" + std::to_string(thread_num) + ".py");
@@ -224,7 +225,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 	}
 	file << "]\nf = open(\"output" << std::to_string(thread_num) << ".txt\", \"w\")\n";
 	std::string tabs = "";
-	uint32_t num = 0;
+	uint32_t num = thread_num;
 
 	// write the nested loops
 	for(uint32_t i=1;i<sizes_len;i++) {
@@ -242,14 +243,15 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		file << "ord_w1[i" << i << "]";
 		if(i < sizes_len-2) file << " + ";
 	}
-	file << "\n" << tabs << "if len(tmp) == " << len << ":\n";
-	tabs += "\t";
+	// file << "\n" << tabs << "if len(tmp) == " << len << ":\n";
+	// tabs += "\t";
 	file << "\n" << tabs << "f.write(tmp + \"\\n\")\n";
 	file << tabs << "print(tmp)";
 	file << "\nf.close()\n";
 	file.close();
 	system((std::string("python3 py") + std::to_string(thread_num) + std::string(".py")).c_str());
 }
+#pragma GCC diagnostic pop
 		
 // function for calculating possible sentences using multi-threading, this function is for single-thread
 void init_pos_sent(std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes, uint32_t sizes_len,
