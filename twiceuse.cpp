@@ -312,23 +312,28 @@ int main(int argc, char *argv[])
 		ciph1 = one_time_pad<std::shared_ptr<uint8_t>>(m1, key, _len);
 		ciph2 = one_time_pad<std::shared_ptr<uint8_t>>(m2, key, _len);
 		eq = one_time_pad<std::string>(m1,m2,_len);
+		for(uint32_t i=0;i<_len;i++) {
+			std::cout << std::setfill('0') << std::setw(2) << std::hex << key.get()[i]+0;
+		}
 	} else { // two ciphertexts will be given (they both have to have been encryped using the same key)
-		_len = m1.length(); // 13
+		std::string _ciph1, _ciph2;
 		std::cout << "\n\x1b[38;2;16;124;224mEnter two encrypted sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput ciphertext one:\033[0m\t";
-		std::getline(std::cin, ciph1);
+		std::getline(std::cin, _ciph1);
 		std::cout << "\n\x1b[12;1;38;2;85;255;85mInput ciphertext two:\x1b[0m\t";
-		std::getline(std::cin, ciph2);
+		std::getline(std::cin, _ciph2);
+		ciph1="";
+		ciph2="";
+		_len = _ciph1.length()/2; // 13
+		for (uint32_t i=0;i<_ciph1.length();i+=2)
+   			ciph1 += (uint8_t)strtol(_ciph1.substr(i, 2).c_str(), NULL, 16);
+		for (uint32_t i=0;i<_ciph2.length();i+=2)
+    		ciph2 += (uint8_t)strtol(_ciph2.substr(i, 2).c_str(), NULL, 16);
 		eq = one_time_pad<std::string>(ciph1, ciph2, _len);
-		
 	}
 	const uint32_t len = _len; // 13
-	for(uint32_t i=0;i<len;i++) {
-		std::cout << std::setfill('0') << std::setw(2) << std::hex << key.get()[i]+0;
-	}
-	std::cout << std::endl;
 	
 	std::string m1m2 = one_time_pad<std::string>(ciph1, ciph2, len);
-	std::cout << std::endl << "C1:\t" << hex(ciph1) << std::endl << "C2:\t" << hex(ciph2)
+	std::cout << std::endl << std::endl << "C1:\t" << hex(ciph1) << std::endl << "C2:\t" << hex(ciph2)
 			  << std::endl << "M1M2:\t" << std::flush << hex(m1m2) << std::endl << "EQ:\t"
 			  << hex(eq) << std::endl;
 	std::cout << "\nCIPHERTEXT SIZE:\t" << std::dec << m1m2.length() << std::endl;
