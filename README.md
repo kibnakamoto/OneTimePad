@@ -1,14 +1,15 @@
 # OneTimePad
 Why you shouldn't use the same key twice when using One time pad encryption scheme. 
 
-
 Code is designed for Linux (Ubuntu) & Unix based OSs. Will not work on Windows.
+
+You enter two sentences of the same length. They are encrypted using a random key and then the code tries bigrams, trigrams, and a list of over 300 words to find all the possible combinations. There are possible sentences generated into an output file (There can be multiple if there was a need for multiple threads), then the possible sentences are added into a file. If you don't want to see these possible sentences (They aren't accurate), you can just type no after the code is finished.
+
+When running the program, if we asume that the executable name is ```twice```, then run it using ```./twice 1``` for a CLI on deleting certain values off the word list and seeing some combinations. These are also not a 100% accurate but they can give you an idea
 
 I have a vector for pieces of text. I need to combine them to make sentences of specified lengths. to make this possible. I need the following algorithm
 
-
 ## How to calculate all the sentences
-This algorithm only works if sizes length is equal to 8 which isn't always the case
 ```
 
 sizes = [4, 7, 8, 8, 10, 5, 1, 3] 
@@ -61,13 +62,4 @@ the first sentence combination the algorithm needs to generate:
 
 ```ta-lk-gh-top-ow-ed-ht-wr : we-he-is-out-us-am-am-no```
 
-Then, There will be a check if it can make any sense in English If so, it can an accepted output. The algorithm is required for cryptanalysis.
-
-
-Since the size of ```sizes``` is calculated at runtime and isn't always equal to 8, I need a recursive algorithm to create a nested loop for every ```sizes[i]```.
-
-
-I am basically looking for an algorithm to replicate the pseudocode above for a dynamic sized ```sizes``` list.
-
-The original code is done in C++ so I would appreciate solutions that aren't only working on Python.
-
+Since the size of ```sizes``` is calculated at runtime and isn't always equal to 8, That's why there is python file(s) (py0.py) algorithm to create a nested loop for every ```sizes[i]```.

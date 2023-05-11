@@ -278,21 +278,56 @@ void print_ord_w(std::vector<std::array<std::string, 2>> ord_w, std::vector<uint
 
 int main(int argc, char *argv[])
 {
-	const std::string m1 = "shortplainligmaballs";//"thetestvector";
-	const std::string m2 = "plaintextsfoundornot";//"non-sensecode";
-	const uint32_t len = m1.length(); // 13
-	std::shared_ptr<uint8_t> key = gen_priv_key(len);
-	std::cout << std::endl << "M1:\t" << hex(m1) << std::endl << "M2:\t" << hex(m2) << std::endl << "KEY:\t";
+	//const std::string m1 = "thetestvector";//"thetestvector";
+	//const std::string m2 = "non-sensecode";//"non-sensecode";
+	std::string m1;
+	std::string m2;
+	std::string mode;
+	std::shared_ptr<uint8_t> key;
+	std::string ciph1;
+	std::string ciph2;
+	std::string eq;
+	uint32_t _len;
+	std::cout << "\nEnter (\x1b[5;1;38;2;16;255;22mC\x1b[0m)iphertext or (\033[5;1;38;2;255;16;22mP\033[0m)laintext of two sentences\ninput:\t";
+	std::getline(std::cin, mode);
+	if(mode[0] == 'p' or mode[0] == 'P') {
+		std::string __k;
+		std::cout << "\n\x1b[38;2;16;124;224mEnter two plaintext sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput sentence one:\033[0m\t";
+		std::getline(std::cin, m1);
+		std::cout << "\n\x1b[12;1;38;2;85;255;85minput sentence two:\x1b[0m\t";
+		std::getline(std::cin, m2);
+		std::cout << "\n\x1b[38;2;16;124;224mInput key as hexadecimal, press enter to generate one, key has to be the same length as the message\ninput:\x1b[0m\t";
+		std::getline(std::cin, __k);
+		_len = m1.length(); // 13
+		if(__k == "") {
+			key = gen_priv_key(_len);
+		} else {
+			key = std::shared_ptr<uint8_t>(new uint8_t[_len]);
+			for (uint32_t i=0;i<__k.length();i+=2)
+    			key.get()[i/2] = (uint8_t)strtol(__k.substr(i, 2).c_str(), NULL, 16);
+		}
+		std::cout << std::endl << "M1:\t" << hex(m1) << std::endl << "M2:\t" << hex(m2) << std::endl << "KEY:\t";
+
+		// encrypt messages using one time pad
+		ciph1 = one_time_pad<std::shared_ptr<uint8_t>>(m1, key, _len);
+		ciph2 = one_time_pad<std::shared_ptr<uint8_t>>(m2, key, _len);
+		eq = one_time_pad<std::string>(m1,m2,_len);
+	} else { // two ciphertexts will be given (they both have to have been encryped using the same key)
+		_len = m1.length(); // 13
+		std::cout << "\n\x1b[38;2;16;124;224mEnter two encrypted sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput ciphertext one:\033[0m\t";
+		std::getline(std::cin, ciph1);
+		std::cout << "\n\x1b[12;1;38;2;85;255;85mInput ciphertext two:\x1b[0m\t";
+		std::getline(std::cin, ciph2);
+		eq = one_time_pad<std::string>(ciph1, ciph2, _len);
+		
+	}
+	const uint32_t len = _len; // 13
 	for(uint32_t i=0;i<len;i++) {
 		std::cout << std::setfill('0') << std::setw(2) << std::hex << key.get()[i]+0;
 	}
 	std::cout << std::endl;
 	
-	// encrypt messages using one time pad
-	std::string ciph1 = one_time_pad<std::shared_ptr<uint8_t>>(m1, key, len);
-	std::string ciph2 = one_time_pad<std::shared_ptr<uint8_t>>(m2, key, len);
 	std::string m1m2 = one_time_pad<std::string>(ciph1, ciph2, len);
-	std::string eq = one_time_pad<std::string>(m1,m2,len);
 	std::cout << std::endl << "C1:\t" << hex(ciph1) << std::endl << "C2:\t" << hex(ciph2)
 			  << std::endl << "M1M2:\t" << std::flush << hex(m1m2) << std::endl << "EQ:\t"
 			  << hex(eq) << std::endl;
