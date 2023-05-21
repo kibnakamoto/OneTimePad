@@ -69,6 +69,7 @@ std::shared_ptr<uint8_t> gen_priv_key(uint32_t n=16)
 }
 
 // handle termination signals
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 inline void handler(sig_atomic_t sig) { catched_sigint = 1; }
 #pragma GCC diagnostic pop
@@ -209,6 +210,7 @@ void inline warning(const std::string msg) {
     std::cout << std::endl << "\033[95;1;5mwarning: \033[0m\033[95;23m" << msg << "\033[0m" << std::endl;
 }
 
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w, uint32_t len)
 {
