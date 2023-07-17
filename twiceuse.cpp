@@ -484,16 +484,52 @@ int main(int argc, char *argv[])
 		delete[] tries;
 	}
 
-	uint32_t max = possible_words_ind.size()==0 ? 0 : *max_element(possible_words_ind.begin(), possible_words_ind.end());
 	uint32_t index = 0;
+	std::vector<std::array<std::string, 2>> ord_bigrams;
+	std::vector<uint32_t> ord_bigrams_ind;
+
+	uint32_t max = possible_bigrams_ind.size()==0 ? 0 : *max_element(possible_bigrams_ind.begin(), possible_bigrams_ind.end());
+	// order possible_bigrams
+	while(index <= max) {
+		auto [ret, nums] = find_all(possible_bigrams_ind, possible_bigrams, index);
+		for(uint32_t i=0;i<ret.size();i++) {
+			ord_bigrams.push_back(ret[i]);
+			ord_bigrams_ind.push_back(nums[i]);
+		}
+		index++;
+	}
+	possible_bigrams = ord_bigrams;
+	possible_bigrams_ind = ord_bigrams_ind;
+
+	std::vector<std::array<std::string, 2>> ord_trigrams;
+	std::vector<uint32_t> ord_trigrams_ind;
+	index = 0;
+	max = possible_trigrams_ind.size()==0 ? 0 : *max_element(possible_trigrams_ind.begin(), possible_trigrams_ind.end());
+
+	if(possible_trigrams.size() != 0) {
+		// order possible_trigrams
+		while(index <= max) {
+			auto [ret, nums] = find_all(possible_trigrams_ind, possible_trigrams, index);
+			for(uint32_t i=0;i<ret.size();i++) {
+				ord_trigrams.push_back(ret[i]);
+				ord_trigrams_ind.push_back(nums[i]);
+			}
+			index++;
+		}
+	}
+	possible_trigrams = ord_trigrams;
+	possible_trigrams_ind = ord_trigrams_ind;
 
 	std::vector<std::array<std::string, 2>> ord_w;
 	std::vector<uint32_t> ord_w_ind;
+	max = possible_words_ind.size()==0 ? 0 : *max_element(possible_words_ind.begin(), possible_words_ind.end());
+	index = 0;
+
 	
-	// order possible_words
 	uint32_t sizes_len=0;
 	uint32_t *sizes;
 	if (possible_words_ind.size()!=0) {
+		// order possible_words
 		while(index <= max) {
 			auto [ret, nums] = find_all(possible_words_ind, possible_words, index);
 			for(uint32_t i=0;i<ret.size();i++) {
