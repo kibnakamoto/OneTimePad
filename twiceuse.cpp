@@ -44,6 +44,12 @@
 #error "specifically NOT designed for windows, use linux or unix or darwin(MAC OS) instead"
 #endif /* if OS == Windows */
 
+// raise when integer too large
+class OneTimePadError : public std::runtime_error {
+	public: explicit OneTimePadError(const char *str) : std::runtime_error(str) {}
+};
+	
+
 
 // required libraries: jq
 
@@ -319,13 +325,13 @@ int main(int argc, char *argv[])
 		}
 	} else { // two ciphertexts will be given (they both have to have been encryped using the same key)
 		std::string _ciph1, _ciph2;
-		std::cout << "\n\x1b[38;2;16;124;224mEnter two encrypted sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput ciphertext one:\033[0m\t";
-		std::getline(std::cin, _ciph1);
+		std::cout << "\n\x1b[38;2;16;124;224mEnter two encrypted sentences of the same length (in hex)\x1b[0m\n\033[1;38;2;255;16;22minput ciphertext one:\033[0m\t";
+		std::cin >> _ciph1;
 		std::cout << "\n\x1b[12;1;38;2;85;255;85mInput ciphertext two:\x1b[0m\t";
-		std::getline(std::cin, _ciph2);
+		std::cin >> _ciph2;
 		ciph1="";
 		ciph2="";
-		_len = _ciph1.length()/2; // 13
+		_len = !((_ciph1.length()/2)%2==0) ? _ciph1.length()/2 : _ciph1.length()/2+1; // if ciph1 len isn't a multiple of 2, add 1
 		for (uint32_t i=0;i<_ciph1.length();i+=2)
    			ciph1 += (uint8_t)strtol(_ciph1.substr(i, 2).c_str(), NULL, 16);
 		for (uint32_t i=0;i<_ciph2.length();i+=2)
@@ -336,7 +342,7 @@ int main(int argc, char *argv[])
 	
 	std::string m1m2 = one_time_pad<std::string>(ciph1, ciph2, len);
 	std::cout << std::endl << std::endl << "C1:\t" << hex(ciph1) << std::endl << "C2:\t" << hex(ciph2)
-			  << std::endl << "M1M2:\t" << std::flush << hex(m1m2) << std::endl << "EQ:\t"
+			  << std::endl << "M1M2:\t" << std::flush << hex(m1m2) << std::endl << "EQ (plaintexts xor'ed if available, else ciphertexts):\t"
 			  << hex(eq) << std::endl;
 	std::cout << "\nCIPHERTEXT SIZE:\t" << std::dec << m1m2.length() << std::endl;
 
@@ -355,6 +361,11 @@ int main(int argc, char *argv[])
 	const unsigned int tri_i = len-3;
 	const constexpr unsigned int tri_len = sizeof(trigram)/sizeof(trigram[0]);
 	const constexpr unsigned int word_len = std::size(words);
+
+	if(m1m2.length() < 3) {
+		std::cout << std::endl << "m1m2: \"" << m1m2 << "\"\t|\tlen: " << m1m2.length() << std::endl;
+		throw OneTimePadError("ciphertexts are smaller than 3 bytes, no possible combinations");
+	}
 
 	// decrypt one of the messages using bigram
 	for(unsigned int i=0;i<bi_len;i++) {
@@ -437,6 +448,7 @@ int main(int argc, char *argv[])
 
 	// try all the words in word list, combine all combinations to come up with something
 	for(unsigned int i=0;i<word_len;i++) {
+		if(m1m2.length() < words[i].length()) continue; // skip word if m1m2 length is smaller. To avoid error
 		std::string *tries = try_all(m1m2, words[i]);
 		std::cout << std::endl << "FOR STRING \"" << words[i] << "\" TRY1:\t\t\t";
 		for(unsigned int j=0;j<len-words[i].length();j++) std::cout << tries[j] << " ";
@@ -471,149 +483,105 @@ int main(int argc, char *argv[])
 		delete[] tries;
 	}
 
-	uint32_t max = *max_element(possible_words_ind.begin(), possible_words_ind.end());
+	uint32_t max = possible_words_ind.size()==0 ? 0 : *max_element(possible_words_ind.begin(), possible_words_ind.end());
 	uint32_t index = 0;
 
 	std::vector<std::array<std::string, 2>> ord_w;
 	std::vector<uint32_t> ord_w_ind;
 	
 	// order possible_words
-	while(index <= max) {
-		auto [ret, nums] = find_all(possible_words_ind, possible_words, index);
-		for(uint32_t i=0;i<ret.size();i++) {
-			ord_w.push_back(ret[i]);
-			ord_w_ind.push_back(nums[i]);
-		}
-		index++;
-	}
-	
-
-	// calculate the amount of every unieqe index
 	uint32_t sizes_len;
-	uint32_t *sizes = unieqe_len(ord_w_ind, sizes_len);
+	uint32_t *sizes;
+	if (possible_words_ind.size()!=0) {
+		while(index <= max) {
+			auto [ret, nums] = find_all(possible_words_ind, possible_words, index);
+			for(uint32_t i=0;i<ret.size();i++) {
+				ord_w.push_back(ret[i]);
+				ord_w_ind.push_back(nums[i]);
+			}
+			index++;
+		}
+		
 
-	//////////////// EXTRA ELIMINITAION-PROCESSES TO SAVE MEMORY AND TIME ////////////////
-	// make sure the starting index is common
-	for(uint32_t i=0;i<sizes[0];i++) {
-		bool valid_start = 0;
-		for(uint32_t j=0;j<10;j++) {
-			valid_start |= ord_w[i][0][0] == starting_letters[j] or ord_w[i][1][0] == starting_letters[j];
-		}
-		if(!valid_start) {
-			ord_w.erase(ord_w.begin()+i);
-			ord_w_ind.erase(ord_w_ind.begin()+i);
-		}
-	}
+		// calculate the amount of every unieqe index
+		sizes = unieqe_len(ord_w_ind, sizes_len);
 
-	// calculate all possible bigrams on the 0th index
-	std::vector<std::array<std::string, 2>> starting_bigrams;
-	for(uint32_t i=0;i<possible_bigrams.size();i++) {
-		if (possible_bigrams_ind[i] == 0) {
-			starting_bigrams.push_back(possible_bigrams[i]);
+		//////////////// EXTRA ELIMINITAION-PROCESSES TO SAVE MEMORY AND TIME ////////////////
+		// make sure the starting index is common
+		for(uint32_t i=0;i<sizes[0];i++) {
+			bool valid_start = 0;
+			for(uint32_t j=0;j<10;j++) {
+				valid_start |= ord_w[i][0][0] == starting_letters[j] or ord_w[i][1][0] == starting_letters[j];
+			}
+			if(!valid_start) {
+				ord_w.erase(ord_w.begin()+i);
+				ord_w_ind.erase(ord_w_ind.begin()+i);
+			}
 		}
-	}
 
-	// make sure that the starting indexes of ord_w is equal to bigram, if it checks out, it is 
-	// probably correct
-	for(uint32_t i=0;i<sizes[0];i++) {
-		bool found = 0;
-		for(uint32_t j=0;j<starting_bigrams.size();j++) {
-			found or_eq (ord_w[i][0].find(starting_bigrams[j][1]) not_eq std::string::npos) |
-					 	(ord_w[i][1].find(starting_bigrams[j][0]) not_eq std::string::npos) |
-						(ord_w[i][1].find(starting_bigrams[j][1]) not_eq std::string::npos) |
-						(ord_w[i][0].find(starting_bigrams[j][0]) not_eq std::string::npos);
+		// calculate all possible bigrams on the 0th index
+		std::vector<std::array<std::string, 2>> starting_bigrams;
+		for(uint32_t i=0;i<possible_bigrams.size();i++) {
+			if (possible_bigrams_ind[i] == 0) {
+				starting_bigrams.push_back(possible_bigrams[i]);
+			}
 		}
-		if(!found) {
-			ord_w.erase(ord_w.begin()+i);
-			ord_w_ind.erase(ord_w_ind.begin()+i);
-		}
-	}
-	
-	///////////////// PROBLEM WITH sizes[5] = sizes_till_n updated in UI is caused by how c command is defined later while 
-	// print comes first.
-	sizes = unieqe_len(ord_w_ind, sizes_len);
 
-	// CLI for removing certain values based on how much they make sense to the user after
-	// concatination of ord_w elements. This is mostly to decrease the amount of threads running
-	// so that any device can run the code.
-	const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
-	while(args) {
-		print_ord_w(ord_w, ord_w_ind);
-		uint32_t v = 0;
-		uint32_t sizes_index = 0;
-		uint64_t sizes_till_n = sizes[0];
-		while(v < ord_w.size()-sizes[sizes_len-1]) {
-			std::array<std::string, 2> *comb = new std::array<std::string, 2>[ord_w.size()-1];
-			while(true) {
-				std::string input = "";
-				std::cout << std::endl << "input index to remove or to see certain values:\t";
-				signal(SIGINT, handler);
-				if (catched_sigint) goto tried_quit;
-				std::getline(std::cin, input);
-				if(input.find("help") != std::string::npos) {
-					system("jq . help.json"); // pretty print json
-				} else if(input == "") {
-					std::cout << "\b" << std::flush;
-				} else if(input == "c") { // continue the loop, by increasing n and dependants of n
-					if(v<ord_w.size()-sizes[sizes_len-1]) {
-						// calculate sizes[i] for loop j for combinations
-						sizes_index = ord_w_ind[v];
-						if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index+1];
-					} else {
-						std::cout << std::flush
-								  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
-					}
-					delete[] comb;
-					v++;
-					for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
-						std::string format = "\033[38;2;16;124;224";
-						if(j%2 == 0) format += ";5m"; // print format for making every 2 values blink
-						else format += "m";
-						comb[v][0] = ord_w[v][0] + ord_w[j][0];
-						comb[v][1] = ord_w[v][1] + ord_w[j][1];
-						std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
-								  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
-								  << "\t\x1b[37m-1:\x1b[0m" << format << v
-								  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
-								  << "\033[0m" << closed_sq_bracket;
-					}
-					goto first_for_loop;
-				} else if(std::all_of(input.begin(),input.end(), [](char inp) {return isdigit(inp);})) {
-					uint32_t digit = static_cast<uint32_t>(std::stoul(input));
-					if(digit < ord_w.size()) {
-						ord_w.erase(ord_w.begin()+digit);
-						ord_w_ind.erase(ord_w_ind.begin()+digit);
-						sizes = unieqe_len(ord_w_ind, sizes_len);
-					} else {
-						std::cout << std::endl << "input too large, has to be smaller than "
-								  << ord_w.size();
-					}
-				} else if(input.starts_with("see")) {
-					if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'o';})) { // print ord_w
-						print_ord_w(ord_w, ord_w_ind);
-					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'l';})) { // print sizes
-						sizes = unieqe_len(ord_w_ind, sizes_len);
-						std::cout << "\nsizes:\t" << open_sq_bracket;
-						for(uint32_t i=0;i<sizes_len;i++) {
-							std::cout << sizes[i];
-							if(i < sizes_len-1) {
-								std::cout << ", ";
-							}
+		// make sure that the starting indexes of ord_w is equal to bigram, if it checks out, it is 
+		// probably correct
+		for(uint32_t i=0;i<sizes[0];i++) {
+			bool found = 0;
+			for(uint32_t j=0;j<starting_bigrams.size();j++) {
+				found or_eq (ord_w[i][0].find(starting_bigrams[j][1]) not_eq std::string::npos) |
+						 	(ord_w[i][1].find(starting_bigrams[j][0]) not_eq std::string::npos) |
+							(ord_w[i][1].find(starting_bigrams[j][1]) not_eq std::string::npos) |
+							(ord_w[i][0].find(starting_bigrams[j][0]) not_eq std::string::npos);
+			}
+			if(!found) {
+				ord_w.erase(ord_w.begin()+i);
+				ord_w_ind.erase(ord_w_ind.begin()+i);
+			}
+		}
+		
+		///////////////// PROBLEM WITH sizes[5] = sizes_till_n updated in UI is caused by how c command is defined later while 
+		// print comes first.
+		sizes = unieqe_len(ord_w_ind, sizes_len);
+
+		// CLI for removing certain values based on how much they make sense to the user after
+		// concatination of ord_w elements. This is mostly to decrease the amount of threads running
+		// so that any device can run the code.
+		const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
+		while(args) {
+			print_ord_w(ord_w, ord_w_ind);
+			uint32_t v = 0;
+			uint32_t sizes_index = 0;
+			uint64_t sizes_till_n = sizes[0];
+			while(v < ord_w.size()-sizes[sizes_len-1]) {
+				std::array<std::string, 2> *comb = new std::array<std::string, 2>[ord_w.size()-1];
+				while(true) {
+					std::string input = "";
+					std::cout << std::endl << "input index to remove or to see certain values:\t";
+					signal(SIGINT, handler);
+					if (catched_sigint) goto tried_quit;
+					std::getline(std::cin, input);
+					if(input.find("help") != std::string::npos) {
+						system("jq . help.json"); // pretty print json
+					} else if(input == "") {
+						std::cout << "\b" << std::flush;
+					} else if(input == "c") { // continue the loop, by increasing n and dependants of n
+						if(v<ord_w.size()-sizes[sizes_len-1]) {
+							// calculate sizes[i] for loop j for combinations
+							sizes_index = ord_w_ind[v];
+							if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index+1];
+						} else {
+							std::cout << std::flush
+									  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
 						}
-						std::cout << closed_sq_bracket << std::endl;
-					} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print v
-							std::cout << std::endl << "n:" << v << " - " << ord_w.size()-1-v
-								<< " amount of iterations left, type \"c\" to continue loop"
-									  << " and increment n, type \"r\" to reset n to 0 and re-loop";
-					} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
-						sizes = unieqe_len(ord_w_ind, sizes_len);
-						std::cout << std::endl << "\x1b[38;2;16;124;224mcombinations:\x1b[0m\t"
-								  << open_curly_bracket << "\n";
-
-						// re-calculate comb since ord_w might be updated
+						delete[] comb;
+						v++;
 						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
 							std::string format = "\033[38;2;16;124;224";
-							if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
+							if(j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 							else format += "m";
 							comb[v][0] = ord_w[v][0] + ord_w[j][0];
 							comb[v][1] = ord_w[v][1] + ord_w[j][1];
@@ -623,68 +591,117 @@ int main(int argc, char *argv[])
 									  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
 									  << "\033[0m" << closed_sq_bracket;
 						}
-						std::cout << std::endl << closed_curly_bracket;
+						goto first_for_loop;
+					} else if(std::all_of(input.begin(),input.end(), [](char inp) {return isdigit(inp);})) {
+						uint32_t digit = static_cast<uint32_t>(std::stoul(input));
+						if(digit < ord_w.size()) {
+							ord_w.erase(ord_w.begin()+digit);
+							ord_w_ind.erase(ord_w_ind.begin()+digit);
+							sizes = unieqe_len(ord_w_ind, sizes_len);
+						} else {
+							std::cout << std::endl << "input too large, has to be smaller than "
+									  << ord_w.size();
+						}
+					} else if(input.starts_with("see")) {
+						if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'o';})) { // print ord_w
+							print_ord_w(ord_w, ord_w_ind);
+						} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'l';})) { // print sizes
+							sizes = unieqe_len(ord_w_ind, sizes_len);
+							std::cout << "\nsizes:\t" << open_sq_bracket;
+							for(uint32_t i=0;i<sizes_len;i++) {
+								std::cout << sizes[i];
+								if(i < sizes_len-1) {
+									std::cout << ", ";
+								}
+							}
+							std::cout << closed_sq_bracket << std::endl;
+						} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print v
+								std::cout << std::endl << "n:" << v << " - " << ord_w.size()-1-v
+									<< " amount of iterations left, type \"c\" to continue loop"
+										  << " and increment n, type \"r\" to reset n to 0 and re-loop";
+						} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
+							sizes = unieqe_len(ord_w_ind, sizes_len);
+							std::cout << std::endl << "\x1b[38;2;16;124;224mcombinations:\x1b[0m\t"
+									  << open_curly_bracket << "\n";
+
+							// re-calculate comb since ord_w might be updated
+							for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
+								std::string format = "\033[38;2;16;124;224";
+								if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
+								else format += "m";
+								comb[v][0] = ord_w[v][0] + ord_w[j][0];
+								comb[v][1] = ord_w[v][1] + ord_w[j][1];
+								std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
+										  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
+										  << "\t\x1b[37m-1:\x1b[0m" << format << v
+										  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
+										  << "\033[0m" << closed_sq_bracket;
+							}
+							std::cout << std::endl << closed_curly_bracket;
+						} else {
+							std::stringstream ss;
+						    ss << "\x1b[21;31;1merror\x1b[0m\033[31;1m:\033[m \033[9;1m" << input
+							   << "\033[0m\033[1;38;2;128;0;0;5m:\033[0m invalid sub-command";
+							std::cout << ss.str();
+						}
+					} else if(input == "q") {
+						tried_quit:
+						catched_sigint = 0;
+						std::cout << "\n\x1b[1;38;2;255;16;22mare you sure you want to quit?\x1b[0m "
+								  << "(\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m) ";
+						char verify;
+						std::cin >> verify;
+						if (verify == 'y') {
+							std::cout << "\033[4A\x1b[4K\n\033[4D\033[2K";
+							goto loop1;
+						} else {
+							std::cout << "\033[4A\x1b[4K\n\033[4D\033[2K";
+						}
+					} else if(input == "exit") {
+						goto stop;
+					} else if(input == "r") {
+						v = 0;
+						sizes_till_n = sizes[0];
 					} else {
-						std::stringstream ss;
-					    ss << "\x1b[21;31;1merror\x1b[0m\033[31;1m:\033[m \033[9;1m" << input
-						   << "\033[0m\033[1;38;2;128;0;0;5m:\033[0m invalid sub-command";
-						std::cout << ss.str();
+						system("jq . help.json"); // pretty print json
 					}
-				} else if(input == "q") {
-					tried_quit:
-					catched_sigint = 0;
-					std::cout << "\n\x1b[1;38;2;255;16;22mare you sure you want to quit?\x1b[0m "
-							  << "(\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m) ";
-					char verify;
-					std::cin >> verify;
-					if (verify == 'y') {
-						std::cout << "\033[4A\x1b[4K\n\033[4D\033[2K";
-						goto loop1;
-					} else {
-						std::cout << "\033[4A\x1b[4K\n\033[4D\033[2K";
-					}
-				} else if(input == "exit") {
-					goto stop;
-				} else if(input == "r") {
-					v = 0;
-					sizes_till_n = sizes[0];
-				} else {
-					system("jq . help.json"); // pretty print json
 				}
+
+				first_for_loop:
+					continue;
 			}
-
-			first_for_loop:
-				continue;
+			loop1:
+				std::cout << "\033[31;1mexit?\033[0m (\033[5;38;2;16;255;22my\033[0m/\x1b[38;2;158;0;0;1mn\x1b[0m) ";
+				char verify;
+				std::cin >> verify;
+				if (verify == 'y') {
+					std::cout << "\x1b[1D\x1b[2K";
+					break;
+				} else {
+					std::cout << "\x1b[1A\x1b[2K";
+					continue;
+				}
 		}
-		loop1:
-			std::cout << "\033[31;1mexit?\033[0m (\033[5;38;2;16;255;22my\033[0m/\x1b[38;2;158;0;0;1mn\x1b[0m) ";
-			char verify;
-			std::cin >> verify;
-			if (verify == 'y') {
-				std::cout << "\x1b[1D\x1b[2K";
-				break;
-			} else {
-				std::cout << "\x1b[1A\x1b[2K";
-				continue;
+		stop:
+
+
+		// re-calculate sizes since ord_w has been updated
+		sizes = unieqe_len(ord_w_ind, sizes_len);
+
+		uint64_t pos_len_thrd = 1;
+		for(uint32_t i=1;i<sizes_len;i++) {
+			pos_len_thrd *= sizes[i];
+		}
+		// if there is too much data to process give warning/error
+		if(pos_len_thrd > UINT32_MAX) {
+			warning("Data size too large, process may not succeed");
+			if(pos_len_thrd > 0xffffffffffff) { // uint48_t size
+				// in this case, there might be a need for around 200 GB of RAM
+				warning("Data size WAY TOO LARGE. Around 200GB of RAM REQUIRED in total.");
 			}
-	}
-	stop:
-
-
-	// re-calculate sizes since ord_w has been updated
-	sizes = unieqe_len(ord_w_ind, sizes_len);
-
-	uint64_t pos_len_thrd = 1;
-	for(uint32_t i=1;i<sizes_len;i++) {
-		pos_len_thrd *= sizes[i];
-	}
-	// if there is too much data to process give warning/error
-	if(pos_len_thrd > UINT32_MAX) {
-		warning("Data size too large, process may not succeed");
-		if(pos_len_thrd > 0xffffffffffff) { // uint48_t size
-			// in this case, there might be a need for around 200 GB of RAM
-			warning("Data size WAY TOO LARGE. Around 200GB of RAM REQUIRED in total.");
 		}
+	} else {
+		warning("Input too small, no possible word combinations found (ord_w), ordered words not established\nCannot generate possible sentences");
 	}
 
 	/* RESOLVED, BY STRICTENING THE ELIMINATION PROCESS USING CLI, and 2 other small comparision operations */
@@ -765,7 +782,10 @@ int main(int argc, char *argv[])
 	} else {
 		std::cout << "\nfinished cracking the OneTimePad Ciphertexts\n";
 	}
-	delete[] sizes;
+	
+	if (possible_words_ind.size()!=0) {
+		delete[] sizes;
+	}
 	return 0;
 
 	// The if the plaintext starts with a non-common letter, it doesn't get used
