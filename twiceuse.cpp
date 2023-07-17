@@ -83,7 +83,7 @@ inline void handler(sig_atomic_t sig) { catched_sigint = 1; }
 std::string hex(std::string inp)
 {
 	std::stringstream ss;
-	for(unsigned int i=0;i<inp.length();i++) ss << std::hex << std::setfill('0') << std::setw(2) << (inp[i]+0);
+	for(unsigned int i=0;i<inp.length();i++) ss << std::hex << std::setfill('0') << std::setw(2) << (uint8_t)inp[i]+0;
 	return ss.str();
 }
 
@@ -231,7 +231,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		file << "\""  << ord_w[i][1] << "\"";
 		if(i != ord_w.size()-1) file << ", ";
 	}
-	file << "]\nf = open(\"output" << std::to_string(thread_num) << ".txt\", \"w\")\n";
+	file << "]\nf = open(\"out/output" << std::to_string(thread_num) << ".txt\", \"w\")\n";
 	std::string tabs = "";
 	uint32_t num = thread_num;
 
@@ -257,7 +257,8 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 	file << tabs << "print(tmp)";
 	file << "\nf.close()\n";
 	file.close();
-	system((std::string("python3 py") + std::to_string(thread_num) + std::string(".py")).c_str());
+	system((std::string("mv py") + std::to_string(thread_num) + std::string(".py out/")).c_str()); // move to out folder
+	system((std::string("python3 out/py") + std::to_string(thread_num) + std::string(".py")).c_str());
 }
 #pragma GCC diagnostic pop
 		
@@ -490,7 +491,7 @@ int main(int argc, char *argv[])
 	std::vector<uint32_t> ord_w_ind;
 	
 	// order possible_words
-	uint32_t sizes_len;
+	uint32_t sizes_len=0;
 	uint32_t *sizes;
 	if (possible_words_ind.size()!=0) {
 		while(index <= max) {
@@ -704,6 +705,23 @@ int main(int argc, char *argv[])
 		warning("Input too small, no possible word combinations found (ord_w), ordered words not established\nCannot generate possible sentences");
 	}
 
+	std::ofstream bigrams_txt;
+	bigrams_txt.open("out/bigrams.txt");
+	bigrams_txt << "bigram count: " << std::dec << possible_bigrams.size() << "\n";
+
+	std::ofstream trigrams_txt;
+	trigrams_txt.open("out/trigrams.txt");
+	trigrams_txt << "trigram count: " << std::dec << possible_trigrams.size() << "\n";
+
+	std::ofstream words_txt;
+	words_txt.open("out/words.txt");
+	words_txt << "word count: " << std::dec << ord_w.size() << "\n";
+
+	std::ofstream general_data;
+	general_data.open("out/data.txt");
+	general_data << "len: " << len << "\nm1m2: " << hex(m1m2) << "\nct1: " << hex(ciph1) << "\nct2: " << hex(ciph2) << "\n";
+	general_data.close();
+
 	/* RESOLVED, BY STRICTENING THE ELIMINATION PROCESS USING CLI, and 2 other small comparision operations */
 	// 185,131,008 amount of data to be processed, how much RAM should be in use?
 	// what is the size of every possible_sentence[i]? the array has 2 13 byte values.
@@ -713,6 +731,7 @@ int main(int argc, char *argv[])
 	// for 15 threads, 280,473,477,120 bytes which is 280,473.4771 MB 
 	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_bigrams.size();i++) {
+		bigrams_txt << possible_bigrams_ind[i] << ": {" << possible_bigrams[i][0] << ", " << possible_bigrams[i][1] << "}\n";
 		std::cout << open_sq_bracket << "\x1b[37;23m" << possible_bigrams_ind[i]
 				  << "\x1b[0m" << white_colon << open_curly_bracket
 				  << "\033[3m" << possible_bigrams[i][0] << "\033[0m" << white_comma
@@ -723,6 +742,7 @@ int main(int argc, char *argv[])
 			  << "\x1b[31mpossible_bigrams count:\t\x1b[0m\033[37;1m"
 			  << std::dec << possible_bigrams.size() << "\033[0m" << std::endl << "\033[32;1mPOSSIBLE_TRIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_trigrams.size();i++) {
+		trigrams_txt << possible_trigrams_ind[i] << ": {" << possible_trigrams[i][0] << ", " << possible_trigrams[i][1] << "}\n";
 		std::cout << open_sq_bracket << "\x1b[37;23m" << possible_trigrams_ind[i]
 			      << "\x1b[0m" << white_colon << open_curly_bracket << "\033[3m"
 				  << possible_trigrams[i][0] << "\033[0m"
@@ -731,6 +751,7 @@ int main(int argc, char *argv[])
 	std::cout << std::endl << "\x1b[31mpossible_trigrams count\t\x1b[0m\033[37;1m"
 			  << possible_trigrams.size() << "\033[0m" << std::endl << "\033[32;1mORD_W:\t\033[0m";
 	for(uint32_t i=0;i<ord_w.size();i++) {
+		words_txt << ord_w_ind[i] << ": {" << ord_w[i][0] << ", " << ord_w[i][1] << "}\n";
 		std::cout << open_sq_bracket << "\x1b[37;23m" << ord_w_ind[i] << "\x1b[0m" << white_colon
 				  << open_curly_bracket << "\x1b[3m" << ord_w[i][0] << "\x1b[0m" << white_comma
 				  << "\033[3m" << ord_w[i][1] << "\033[0m" << closed_curly_bracket << closed_sq_bracket;
@@ -742,48 +763,53 @@ int main(int argc, char *argv[])
 	std::cout << std::endl << "\x1b[31mpossible_sentences count:\t\x1b[0m\033[37;1m" << pos_len
 			  << "\033[0m" << std::endl;
 
-	std::string ask;
-	std::cout << "\n\x1b[1;38;2;255;16;22mDo You Want to Generate All the Possible Sentences?\x1b[0m (\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m)";
-	std::cin >> ask;
-	if(ask[0] == 'y') {
-		// allocate possible_sentences pointer, on multi-threads
-		// t_count equals the amount of threads required and in use, calculated as the amount of starting sylables if applicable
-		// first calculate
-		uint32_t t_count = sizes[0];
-		std::vector<std::thread> threads(t_count);
-		size_t thr_count = std::thread::hardware_concurrency()-5;
+	// close the data files
+	bigrams_txt.close();
+	trigrams_txt.close();
+	words_txt.close();
 
-		// iterate through all threads, will work even if the amount of threads is larger than the amount
-		// of threads
-		uint32_t pos_start_ind = 0;
-		uint32_t ord_w_i = 0;
-		if(t_count >= thr_count) {
-			while (t_count != t_count%thr_count) {
-				for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
-					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
-					ord_w_i++;
-				}
-				for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
-
-				t_count -= thr_count;
-				pos_start_ind += thr_count;
-			}
-		}
-		
-		// iterate the threads that are left (non-multiple of thr_count)
-		uint32_t cond = t_count%thr_count;
-		if(cond != 0) {
-			for(uint32_t i=pos_start_ind;i<cond;i++) {
-				threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
-			}
-			for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
-			t_count -= cond;
-		}
-	} else {
-		std::cout << "\nfinished cracking the OneTimePad Ciphertexts\n";
-	}
-	
 	if (possible_words_ind.size()!=0) {
+		std::string ask;
+		std::cout << "\n\x1b[1;38;2;255;16;22mDo You Want to Generate All the Possible Sentences?\x1b[0m (\x1b[12;1;38;2;85;255;85my\x1b[0m/\033[1;31;13mn\033[0m)";
+		std::cin >> ask;
+		if(ask[0] == 'y') {
+			// allocate possible_sentences pointer, on multi-threads
+			// t_count equals the amount of threads required and in use, calculated as the amount of starting sylables if applicable
+			// first calculate
+			uint32_t t_count = sizes[0];
+			std::vector<std::thread> threads(t_count);
+			size_t thr_count = std::thread::hardware_concurrency()-5;
+
+			// iterate through all threads, will work even if the amount of threads is larger than the amount
+			// of threads
+			uint32_t pos_start_ind = 0;
+			uint32_t ord_w_i = 0;
+			if(t_count >= thr_count) {
+				while (t_count != t_count%thr_count) {
+					for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
+						threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
+						ord_w_i++;
+					}
+					for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
+
+					t_count -= thr_count;
+					pos_start_ind += thr_count;
+				}
+			}
+			
+			// iterate the threads that are left (non-multiple of thr_count)
+			uint32_t cond = t_count%thr_count;
+			if(cond != 0) {
+				for(uint32_t i=pos_start_ind;i<cond;i++) {
+					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
+				}
+				for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
+				t_count -= cond;
+			}
+		} else {
+			std::cout << "\nfinished cracking the OneTimePad Ciphertexts\n";
+		}
+
 		delete[] sizes;
 	}
 	return 0;
