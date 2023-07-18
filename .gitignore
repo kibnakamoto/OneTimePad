@@ -6,3 +6,8 @@ compile.sh
 
 // valgrind log
 valgrind.out
+
+out
+
+out/*
+

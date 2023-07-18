@@ -241,30 +241,18 @@ with open("out/bigrams.txt", "r") as f:
             file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
             file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
             file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
-            file.write(f"\n{tabs}for ind in range(len(length)):")
-            file.write(f"\n{tabs}if hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
-            file.write(f"\n{tabs}    for i in range(256):") 
-            file.write(f"\n{tabs}        if 32 ^ i == m1m2[ind]:") # 32 is ' '
-            if randbelow(2) == 1: # flip coin to see who should get space
-                file.write(f"\n{tabs}            string[ind] = \' \'")
-                file.write(f"\n{tabs}            string2[ind] = i")
-                file.write(f"\n{tabs}            break")
-            else:
-                file.write(f"\n{tabs}            string2[ind] = \' \'")
-                file.write(f"\n{tabs}            string[ind] = i")
-                file.write(f"\n{tabs}            break")
-
-            file.write(f"\n{tabs}if hx(onetimepad(string, string2))[ind+1] != m1m2[ind+1]:") # if index doesn't match
-            file.write(f"\n{tabs}    for i in range(256):") 
-            file.write(f"\n{tabs}        if 32 ^ i == m1m2[ind+1]:") # 32 is ' '
-            if randbelow(2) == 1: # flip coin to see who should get space
-                file.write(f"\n{tabs}            string[ind+1] = \' \'")
-                file.write(f"\n{tabs}            string2[ind+1] = i")
-                file.write(f"\n{tabs}            break")
-            else:
-                file.write(f"\n{tabs}            string2[ind+1] = \' \'")
-                file.write(f"\n{tabs}            string[ind+1] = i")
-                file.write(f"\n{tabs}            break")
+        file.write(f"\n{tabs}for ind in range({length}):")
+        file.write(f"\n{tabs}    if hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
+        file.write(f"\n{tabs}        for i in range(256):") 
+        file.write(f"\n{tabs}            if 32 ^ i == int(m1m2[ind], 16):") # 32 is ' '
+        if randbelow(2) == 1: # flip coin to see who should get space
+            file.write(f"\n{tabs}                string[ind] = \' \'")
+            file.write(f"\n{tabs}                string2[ind] = chr(i)")
+            file.write(f"\n{tabs}                break")
+        else:
+            file.write(f"\n{tabs}                string2[ind] = \' \'")
+            file.write(f"\n{tabs}                string[ind] = chr(i)")
+            file.write(f"\n{tabs}                break")
         file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
         file.write(f"\n{tabs}print(strings)")
         file.write(f"\n{tabs}f.write(strings + \"\\n\")")
