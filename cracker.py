@@ -9,8 +9,9 @@ OneTimePad licenced under the GNU General Public Licence
 # python file for cracking the plaintexts using the data given
 
 from secrets import choice
-from time import time
 from decimal import Decimal
+import time
+import sys
 
 dot_arts = [
 '''
@@ -100,6 +101,36 @@ colors = ["31", "32", "34", "36", "37", "91", "92",  "38;2;176;29;2", "38;2;140;
 
 print(f"\033[1;{choice(colors)}m{choice(dot_arts)}\033[0m")
 
+def onetimepad(x:str,y:str) -> str:
+    ret = ""
+    for i in range(len(x)):
+        ret += chr(ord(x[i]) ^ ord(y[i]))
+    return ret
+
+# str to hex
+def hx(x):
+    ret = ""
+    for i in x:
+        ret += hex(ord(i))[2:].zfill(2)
+    return ret
+
+def unieqe_len(lst):
+    s = set(lst)
+    sizes = [0]*len(s)
+    i=0
+    for e in s:
+        for j in lst:
+            if j == e:
+                sizes[i]+=1
+        i+=1
+    return sizes
+
+def warning(msg):
+    print("\033[95;1;5mwarning: \033[0m\033[1;95;23m", msg, "\033[0m")
+
+def message(msg):
+    print("\033[95;3m[msg] \033[0m\033[95;23m", msg, "\033[0m")
+
 # set general data variables
 with open("out/data.txt", "r") as f:
     data_txt = f.readlines()
@@ -111,31 +142,69 @@ with open("out/data.txt", "r") as f:
     ct1 = bytes(bytearray.fromhex(ct1_tmp))
     ct2 = bytes(bytearray.fromhex(ct2_tmp))
 
-pt1_progress_bar = "_ "*length
-pt2_progress_bar = "_ "*length
-pt1_progress = 0 # percent
-pt2_progress = 0 # percent
+pt1 = ""
+pt2 = ""
 print("\033[1;32mlength of message:\t\033[0m", length)
 print("\n\x1b[1;31mct1:\t\x1b[0m\033[37;1m ", ct1_tmp, "\033[0m")
 print("\x1b[1;31mct2:\t\x1b[0m\033[37;1m ", ct2_tmp, "\033[0m")
 print("\n\x1b[1;31mm1m2:\t\x1b[0m\033[37;1m ", m1m2_tmp, "\033[0m")
-print("\n\x1b[1;6;38;2;224;20;20mmessage one progress bar:\t", end='')
-print(f"\x1b[25;2;4;1;38;2;7;224;21m{pt1_progress_bar}\x1b[0m\t\t\033[1;38;2;7;224;21m{pt1_progress}%\033[0m")
-print("\n\x1b[1;6;38;2;224;20;20mmessage two progress bar:\t", end='')
-print(f"\x1b[25;2;4;1;38;2;7;224;21m{pt2_progress_bar}\x1b[0m\t\t\033[1;38;2;7;224;21m{pt2_progress}%\033[0m")
 print()
 
-# Data format: index: {x,y} where x xor y = m1m2. X and Y = can be plaintexts and ciphertexts (with same key). results in the same OneTimePad Exploit
+inc = 100//length
 
+# Data format: index: {x,y} where x xor y = m1m2. X and Y = can be plaintexts and ciphertexts (with same key). results in the same OneTimePad Exploit
+pt1_progress_bar = ""
 # first use bigrams
 with open("out/bigrams.txt", "r") as f:
     # calculate possible plaintext using bigrams
     bigrams_txt = f.readlines()
     bigrams_len = int(bigrams_txt[0].replace("bigram count: ", ""))
     bigrams_txt.remove(bigrams_txt[0]) # remove first index (len)
+    bigram_indexes = []
+    bigrams_p1 = []
+    bigrams_p2 = []
+    all_lines = ""
+
+    # set bigrams and bigram indexes
     for line in bigrams_txt:
         index = int(line.partition(":")[0])
         start = line.index("{")
         end = line.index("}")
         first = line[start+1:start+3]
         second = line[end-2:end]
+        xored = onetimepad(first, second)
+
+        if hx(xored) != m1m2_tmp[index*2:index*2+4]:
+            warning("found a NON-matching m1m2 bigram ciphertext")
+            message(f"{first} xor {second} !=  {m1m2_tmp[index*2:index*2+4]}")
+            message(hx(onetimepad(first, second)) + " != " + m1m2_tmp[index*2:index*2+4])
+            bigrams_txt.remove(line)
+            continue
+        bigram_indexes.append(index)
+        bigrams_p1.append(first)
+        bigrams_p2.append(second)
+        all_lines += line + "\n"
+    
+    with open(f"out/bigram.py", "w") as file:
+        file.write(f"b1 = {bigrams_p1}\nb2 = {bigrams_p2}\nwith open(\"out/bigram_out.txt\", \"w\") as f:\n")
+        sizes = unieqe_len(bigram_indexes)
+        num = sizes[0]
+        prev_num = 0
+        for i in range(1, len(sizes)):
+            file.write("    "*i + f"for i{i-1} in range({prev_num}, {num}):\n")
+            num += sizes[i]
+            prev_num = num - sizes[i-1]
+        tabs = len(sizes)*"    "
+        file.write(f"{tabs}tmp = ")
+        for i in range(len(sizes)-1):
+            file.write(f"b1[i{i}]")
+            if i < len(sizes)-2:
+                file.write(" + ")
+        file.write("+ \" : \" + ")
+
+        for i in range(len(sizes)-1):
+            file.write(f"b2[i{i}]")
+            if i < len(sizes)-2:
+                file.write(" + ")
+        file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
+
