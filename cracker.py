@@ -235,7 +235,7 @@ with open("out/bigrams.txt", "r") as f:
         # file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
         file.write(f"{tabs}string = list(\" \"*{length})")
         file.write(f"\n{tabs}string2 = list(\" \"*{length})")
-        for i in range(len(sizes)-1):
+        for i in range(len(sizes)):
             file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[i]}")
             file.write(f"\n{tabs}string[ind] = b1[i{i}][0]")
             file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
@@ -256,8 +256,6 @@ with open("out/bigrams.txt", "r") as f:
         file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
         file.write(f"\n{tabs}print(strings)")
         file.write(f"\n{tabs}f.write(strings + \"\\n\")")
-        file.write(f"\n{tabs}print(hx(onetimepad(string, string2)), \" : \" , m1m2)")
-        file.write(f"\n{tabs}exit()")
     exec(open("out/bigram.py").read()) # run the file
 
     with open("out/bigram_out.txt", "r+") as f:
@@ -268,8 +266,6 @@ with open("out/bigrams.txt", "r") as f:
             msg1 = part[0]
             msg2 = part[2]
 
-            
-            # all found indexes are correct, now fill the wrong ones. compare 
-
-    # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
+            # every data is now correct
+            # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
 
