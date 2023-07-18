@@ -210,7 +210,7 @@ with open("out/bigrams.txt", "r") as f:
     for i in x:
         ret.append(hex(ord(i))[2:].zfill(2))
     return ret\n''')
-        file.write(f"\nb1 = {bigrams_p1}\nb2 = {bigrams_p2}\nm1m2={sep(m1m2_tmp)}\nwith open(\"out/bigram_out.txt\", \"w\") as f:\n")
+        file.write(f"\nb1 = {bigrams_p1}\nb2 = {bigrams_p2}\nm1m2={sep(m1m2_tmp)}\nwith open(\"out/bigram_out.txt\", \"w+\") as f:\n")
         sizes = unieqe_len(bigram_indexes)
         num = sizes[0]
         prev_num = 0
@@ -255,16 +255,17 @@ with open("out/bigrams.txt", "r") as f:
             file.write(f"\n{tabs}                break")
         file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
         file.write(f"\n{tabs}print(strings)")
-        file.write(f"\n{tabs}f.write(strings + \"\\n\")")
+        file.write(f"\n{tabs}if not strings in f.read():")
+        file.write(f"\n{tabs}    f.write(strings + \"\\n\")")
     exec(open("out/bigram.py").read()) # run the file
 
-    with open("out/bigram_out.txt", "r+") as f:
-        # check the indexes and correct them
-        lines = f.readlines()
-        for line in lines:
-            part = line.partition(" : ")
-            msg1 = part[0]
-            msg2 = part[2]
+    #with open("out/bigram_out.txt", "r+") as f:
+    #    # check the indexes and correct them
+    #    lines = f.readlines()
+    #    for line in lines:
+    #        part = line.partition(" : ")
+    #        msg1 = part[0]
+    #        msg2 = part[2]
 
             # every data is now correct
             # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
