@@ -11,7 +11,7 @@ OneTimePad licenced under the GNU General Public Licence
 from secrets import choice
 from decimal import Decimal
 import time
-import sys
+import re
 
 dot_arts = [
 '''
@@ -131,6 +131,13 @@ def warning(msg):
 def message(msg):
     print("\033[95;3m[msg] \033[0m\033[95;23m", msg, "\033[0m")
 
+def add(string, i):
+    return string[:i] + ' ' + string[i:]
+
+def rm(string, i):
+    return string[:i] + string[i+1:]
+
+
 # set general data variables
 with open("out/data.txt", "r") as f:
     data_txt = f.readlines()
@@ -145,9 +152,9 @@ with open("out/data.txt", "r") as f:
 pt1 = ""
 pt2 = ""
 print("\033[1;32mlength of message:\t\033[0m", length)
-print("\n\x1b[1;31mct1:\t\x1b[0m\033[37;1m ", ct1_tmp, "\033[0m")
-print("\x1b[1;31mct2:\t\x1b[0m\033[37;1m ", ct2_tmp, "\033[0m")
-print("\n\x1b[1;31mm1m2:\t\x1b[0m\033[37;1m ", m1m2_tmp, "\033[0m")
+print("\n\x1b[1;31mciphertext 1(ct1):\t\x1b[0m\033[37;1m ", ct1_tmp, "\033[0m")
+print("\x1b[1;31mciphertext 2 (ct2):\t\x1b[0m\033[37;1m ", ct2_tmp, "\033[0m")
+print("\n\x1b[1;31mm1 xor m2 (m1m2):\t\x1b[0m\033[37;1m ", m1m2_tmp, "\033[0m")
 print()
 
 inc = 100//length
@@ -186,25 +193,64 @@ with open("out/bigrams.txt", "r") as f:
         all_lines += line + "\n"
     
     with open(f"out/bigram.py", "w") as file:
-        file.write(f"b1 = {bigrams_p1}\nb2 = {bigrams_p2}\nwith open(\"out/bigram_out.txt\", \"w\") as f:\n")
+        file.write('''def onetimepad(x:str,y:str) -> str:
+    ret = ""
+    for i in range(len(x)):
+        ret += chr(ord(x[i]) ^ ord(y[i]))
+    return ret\n''')
+        file.write('''\ndef hx(x):
+    ret = ""
+    for i in x:
+        ret += hex(ord(i))[2:].zfill(2) + \" \"
+    return ret\n''')
+        file.write(f"\nb1 = {bigrams_p1}\nb2 = {bigrams_p2}\nwith open(\"out/bigram_out.txt\", \"w\") as f:\n")
         sizes = unieqe_len(bigram_indexes)
         num = sizes[0]
         prev_num = 0
-        for i in range(1, len(sizes)):
-            file.write("    "*i + f"for i{i-1} in range({prev_num}, {num}):\n")
-            num += sizes[i]
-            prev_num = num - sizes[i-1]
-        tabs = len(sizes)*"    "
-        file.write(f"{tabs}tmp = ")
-        for i in range(len(sizes)-1):
-            file.write(f"b1[i{i}]")
-            if i < len(sizes)-2:
-                file.write(" + ")
-        file.write("+ \" : \" + ")
 
-        for i in range(len(sizes)-1):
-            file.write(f"b2[i{i}]")
-            if i < len(sizes)-2:
-                file.write(" + ")
-        file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
+        for i in range(len(sizes)):
+            file.write("    "*(i+1) + f"for i{i} in range({prev_num}, {num}):\n")
+            if i != len(sizes)-1:
+                num += sizes[i+1]
+            prev_num += sizes[i]
+        tabs = len(sizes)*"    " + "    "
+        # file.write(f"{tabs}tmp = ")
+        # for i in range(len(sizes)-1):
+        #     file.write(f"b1[i{i}]")
+        #     if i < len(sizes)-2:
+        #         file.write(" + ")
+        # file.write("+ \" : \" + ")
+
+        # for i in range(len(sizes)-1):
+        #     file.write(f"b2[i{i}]")
+        #     if i < len(sizes)-2:
+        #         file.write(" + ")
+        # file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
+        file.write(f"{tabs}string = list(\" \"*{length})")
+        file.write(f"\n{tabs}string2 = list(\" \"*{length})")
+        print(sizes)
+        for i in range(len(sizes)-1): # {0, 1, 2, 3, 6, 10, 11, 12}
+            file.write(f"\n{tabs}string[{list(set(bigram_indexes))[i]}] = b1[i{i}][0]")
+            file.write(f"\n{tabs}string[{list(set(bigram_indexes))[i]}+1] = b1[i{i}][1]")
+            file.write(f"\n{tabs}string2[{list(set(bigram_indexes))[i]}] = b2[i{i}][0]")
+            file.write(f"\n{tabs}string2[{list(set(bigram_indexes))[i]}+1] = b2[i{i}][1]")
+        file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
+        file.write(f"\n{tabs}print(strings)") # 2 byets short
+        file.write(f"\n{tabs}f.write(strings + \"\\n\")")
+        file.write(f"\n{tabs}print(hx(onetimepad(string, string2)), \" : \" , \"{m1m2_tmp}\")")
+        file.write(f"\n{tabs}exit()")
+    exec(open("out/bigram.py").read()) # run the file
+
+    with open("out/bigram_out.txt", "r+") as f:
+        # check the indexes and correct them
+        lines = f.readlines()
+        for line in lines:
+            part = line.partition(" : ")
+            msg1 = part[0]
+            msg2 = part[2]
+
+            
+            # check if all indexes are correct. Like checked above in line 177
+
+    # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
 
