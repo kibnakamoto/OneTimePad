@@ -8,7 +8,7 @@ OneTimePad licenced under the GNU General Public Licence
 
 # python file for cracking the plaintexts using the data given
 
-from secrets import choice
+from secrets import choice, randbelow
 from decimal import Decimal
 import time
 import re
@@ -125,6 +125,13 @@ def unieqe_len(lst):
         i+=1
     return sizes
 
+# seperate every ith value
+def sep(string, i=2) -> list:
+    lst = []
+    for j in range(0, len(string), 2):
+        lst.append(string[j:j+2])
+    return lst
+
 def warning(msg):
     print("\033[95;1;5mwarning: \033[0m\033[1;95;23m", msg, "\033[0m")
 
@@ -199,11 +206,11 @@ with open("out/bigrams.txt", "r") as f:
         ret += chr(ord(x[i]) ^ ord(y[i]))
     return ret\n''')
         file.write('''\ndef hx(x):
-    ret = ""
+    ret = []
     for i in x:
-        ret += hex(ord(i))[2:].zfill(2) + \" \"
+        ret.append(hex(ord(i))[2:].zfill(2))
     return ret\n''')
-        file.write(f"\nb1 = {bigrams_p1}\nb2 = {bigrams_p2}\nwith open(\"out/bigram_out.txt\", \"w\") as f:\n")
+        file.write(f"\nb1 = {bigrams_p1}\nb2 = {bigrams_p2}\nm1m2={sep(m1m2_tmp)}\nwith open(\"out/bigram_out.txt\", \"w\") as f:\n")
         sizes = unieqe_len(bigram_indexes)
         num = sizes[0]
         prev_num = 0
@@ -228,16 +235,40 @@ with open("out/bigrams.txt", "r") as f:
         # file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
         file.write(f"{tabs}string = list(\" \"*{length})")
         file.write(f"\n{tabs}string2 = list(\" \"*{length})")
-        print(sizes)
-        for i in range(len(sizes)-1): # {0, 1, 2, 3, 6, 10, 11, 12}
-            file.write(f"\n{tabs}string[{list(set(bigram_indexes))[i]}] = b1[i{i}][0]")
-            file.write(f"\n{tabs}string[{list(set(bigram_indexes))[i]}+1] = b1[i{i}][1]")
-            file.write(f"\n{tabs}string2[{list(set(bigram_indexes))[i]}] = b2[i{i}][0]")
-            file.write(f"\n{tabs}string2[{list(set(bigram_indexes))[i]}+1] = b2[i{i}][1]")
+        for i in range(len(sizes)-1):
+            file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[i]}")
+            file.write(f"\n{tabs}string[ind] = b1[i{i}][0]")
+            file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
+            file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
+            file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
+            file.write(f"\n{tabs}for ind in range(len(length)):")
+            file.write(f"\n{tabs}if hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
+            file.write(f"\n{tabs}    for i in range(256):") 
+            file.write(f"\n{tabs}        if 32 ^ i == m1m2[ind]:") # 32 is ' '
+            if randbelow(2) == 1: # flip coin to see who should get space
+                file.write(f"\n{tabs}            string[ind] = \' \'")
+                file.write(f"\n{tabs}            string2[ind] = i")
+                file.write(f"\n{tabs}            break")
+            else:
+                file.write(f"\n{tabs}            string2[ind] = \' \'")
+                file.write(f"\n{tabs}            string[ind] = i")
+                file.write(f"\n{tabs}            break")
+
+            file.write(f"\n{tabs}if hx(onetimepad(string, string2))[ind+1] != m1m2[ind+1]:") # if index doesn't match
+            file.write(f"\n{tabs}    for i in range(256):") 
+            file.write(f"\n{tabs}        if 32 ^ i == m1m2[ind+1]:") # 32 is ' '
+            if randbelow(2) == 1: # flip coin to see who should get space
+                file.write(f"\n{tabs}            string[ind+1] = \' \'")
+                file.write(f"\n{tabs}            string2[ind+1] = i")
+                file.write(f"\n{tabs}            break")
+            else:
+                file.write(f"\n{tabs}            string2[ind+1] = \' \'")
+                file.write(f"\n{tabs}            string[ind+1] = i")
+                file.write(f"\n{tabs}            break")
         file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
-        file.write(f"\n{tabs}print(strings)") # 2 byets short
+        file.write(f"\n{tabs}print(strings)")
         file.write(f"\n{tabs}f.write(strings + \"\\n\")")
-        file.write(f"\n{tabs}print(hx(onetimepad(string, string2)), \" : \" , \"{m1m2_tmp}\")")
+        file.write(f"\n{tabs}print(hx(onetimepad(string, string2)), \" : \" , m1m2)")
         file.write(f"\n{tabs}exit()")
     exec(open("out/bigram.py").read()) # run the file
 
@@ -250,7 +281,7 @@ with open("out/bigrams.txt", "r") as f:
             msg2 = part[2]
 
             
-            # check if all indexes are correct. Like checked above in line 177
+            # all found indexes are correct, now fill the wrong ones. compare 
 
     # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
 
