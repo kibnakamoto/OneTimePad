@@ -218,10 +218,24 @@ void inline warning(const std::string msg) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w, uint32_t len)
+void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w, std::vector<uint32_t> &ord_w_ind, uint32_t len, std::string m1m2)
 {
 	std::ofstream file("py" + std::to_string(thread_num) + ".py");
-	file << "ord_w0 = [";
+	file << "import sys"
+	     << "\nfrom random import randrange"
+		 << "\ndef onetimepad(x:str,y:str) -> str:"
+		 << "\n    ret = \"\"\n"
+		 << "\n    for i in range(len(x)):\n"
+	     << "\n        ret += chr(ord(x[i]) ^ ord(y[i]))"
+	     << "\n    return ret\n"
+	     << "\ndef hx(x):"
+	     << "\n    ret = []"
+	     << "\n    for i in x:"
+	     << "\n        ret.append(hex(ord(i))[2:].zfill(2))"
+	     << "\n    return ret\n";
+	file << "\nm1m2 = \"" << hex(m1m2) << "\""
+	     << "\nm1m2 = [m1m2[j:j+2] for j in range(0, len(m1m2), 2)]";
+	file << "\nord_w0 = [";
 	for(uint32_t i=0;i<ord_w.size();i++) {
 		file << "\""  << ord_w[i][0] << "\"";
 		if(i != ord_w.size()-1) file << ", ";
@@ -231,30 +245,81 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		file << "\""  << ord_w[i][1] << "\"";
 		if(i != ord_w.size()-1) file << ", ";
 	}
-	file << "]\nf = open(\"out/output" << std::to_string(thread_num) << ".txt\", \"w\")\n";
+	file << "]\nindexes = [";
+	for(uint32_t i=0;i<ord_w_ind.size();i++) {
+		if(ord_w_ind[i] != 0){
+			file << ord_w_ind[i];
+			if(i != ord_w_ind.size()-1) file << ", ";
+		}
+	}
+	file << "]\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
 	std::string tabs = "";
-	uint32_t num = thread_num;
-
+	uint32_t num = sizes[0];
+                    
 	// write the nested loops
 	for(uint32_t i=1;i<sizes_len;i++) {
 		file << tabs << "for i" << i-1 << " in range(" << num << ", " << num+sizes[i] << "):\n";
 		if (i >= 1) num += sizes[i];
-		tabs += "\t";
+		tabs += "    ";
 	}
-	file << tabs << "tmp = ";
-	for(uint32_t i=0;i<sizes_len-1;i++) {
-		file << "ord_w0[i" << i << "]";
-		if(i < sizes_len-2) file << " + ";
+    file << "\n" << tabs << "string = list(\" \"*" << len << ")"
+    	 << "\n" << tabs << "string2 = list(\" \"*" << len << ")"
+         << "\n" << tabs << "for i in range(len(ord_w0[" << thread_num << "])):"
+         << "\n" << tabs << "    string[i] = ord_w0[" << thread_num << "][i]"
+         << "\n" << tabs << "    string2[i] = ord_w1[" << thread_num << "][i]"
+         << "\n" << tabs << "ind = list(set(indexes))[0] + " << thread_num
+         << "\n" << tabs << "for i in range(len(ord_w0[i0])):"
+         << "\n" << tabs << "    if string[ind+i] == \' \':"
+         << "\n" << tabs << "        string[ind+i] = ord_w0[i0][i]"
+         << "\n" << tabs << "    if string2[ind+i] == \' \':"
+         << "\n" << tabs << "        string2[ind+i] = ord_w1[i0][i]";
+	for(uint32_t i=1;i<sizes_len-1;i++) {
+        file << "\n" << tabs << "ind = list(set(indexes))[" << i << "]"
+             << "\n" << tabs << "for i in range(len(ord_w0[i" << i <<"])):"
+             << "\n" << tabs << "    if string[ind+i] == \' \':"
+             << "\n" << tabs << "        string[ind+i] = ord_w0[i" << i <<"][i]"
+             << "\n" << tabs << "    if string2[ind+i] == \' \':"
+             << "\n" << tabs << "        string2[ind+i] = ord_w1[i" << i <<"][i]";
 	}
-	file << " + \" : \" + ";
-	for(uint32_t i=0;i<sizes_len-1;i++) {
-		file << "ord_w1[i" << i << "]";
-		if(i < sizes_len-2) file << " + ";
+	file << "\n" << tabs << "for ind in range(" << len << "):"
+	     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
+	     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
+	     << "\n" << tabs << "        for i in range(97,122):"
+	     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
+    std::random_device randDev;
+    std::mt19937 generator(randDev() ^ time(NULL));
+    std::uniform_int_distribution<uint8_t> distr;
+	if(distr(generator)%2) {
+	    file << "\n" << tabs << "                string[ind] = chr(number)"
+	         << "\n" << tabs << "                string2[ind] = chr(i)"
+	         << "\n" << tabs << "                break";
+	} else {
+    	file << "\n" << tabs << "                string2[ind] = chr(number)"
+    	        "\n" << tabs << "                string[ind] = chr(i)"
+    	        "\n" << tabs << "                break";
 	}
-	// file << "\n" << tabs << "if len(tmp) == " << len << ":\n";
-	// tabs += "\t";
-	file << "\n" << tabs << "f.write(tmp + \"\\n\")\n";
-	file << tabs << "print(tmp)";
+
+	file << "\n" << tabs << "strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\""
+         << "\n" << tabs << "f.write(strings + \"\\n\")"
+         << "\n" << "    progress=(i0-1)*100//(" << sizes[1] << ")"
+         << "\n" << "    progress_bar=\"_\"*progress"
+         << "\n" << "    sys.stdout.write(f\"\\r\")"
+         << "\n" << "    sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))"
+         << "\n" << "sys.stdout.write(\"\\n\")";
+	// file << tabs << "tmp = ";
+	// for(uint32_t i=0;i<sizes_len-1;i++) {
+	// 	file << "ord_w0[i" << i << "]";
+	// 	if(i < sizes_len-2) file << " + ";
+	// }
+	// file << " + \" : \" + ";
+	// for(uint32_t i=0;i<sizes_len-1;i++) {
+	// 	file << "ord_w1[i" << i << "]";
+	// 	if(i < sizes_len-2) file << " + ";
+	// }
+	// // file << "\n" << tabs << "if len(tmp) == " << len << ":\n";
+	// // tabs += "\t";
+	// file << "\n" << tabs << "f.write(tmp + \"\\n\")\n";
+	// file << tabs << "print(tmp)";
 	file << "\nf.close()\n";
 	file.close();
 	system((std::string("mv py") + std::to_string(thread_num) + std::string(".py out/")).c_str()); // move to out folder
@@ -264,11 +329,11 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		
 // function for calculating possible sentences using multi-threading, this function is for single-thread
 void init_pos_sent(std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes, uint32_t sizes_len,
-				   uint32_t len, uint32_t thr_num)
+				   uint32_t len, uint32_t thr_num, std::vector<uint32_t> &ord_w_ind, std::string m1m2)
 {
 	uint64_t ram_available = ((uint64_t)sysconf (_SC_PHYS_PAGES) * sysconf (_SC_PAGESIZE));
 	std::cout << "\nTotal Ram Available:\t" << ram_available << "B\n";
-	try_combinations(sizes, sizes_len, thr_num, ord_w, len);
+	try_combinations(sizes, sizes_len, thr_num, ord_w, ord_w_ind, len, m1m2);
 	std::cout << "\nfinished thread " << thr_num;
 }
 
@@ -297,16 +362,20 @@ int main(int argc, char *argv[])
 	std::string ciph2;
 	std::string eq;
 	uint32_t _len;
+	system("python3 dotart.py");
 	std::cout << "\nEnter (\x1b[5;1;38;2;16;255;22mC\x1b[0m)iphertext or (\033[5;1;38;2;255;16;22mP\033[0m)laintext of two sentences\ninput:\t";
-	std::getline(std::cin, mode);
+	//std::getline(std::cin, mode);
+	mode[0] = 'p';
+	m1 = "niggas in paris";
+	m2 = "paris in niggas";
 	if(mode[0] == 'p' or mode[0] == 'P') {
 		std::string __k;
 		std::cout << "\n\x1b[38;2;16;124;224mEnter two plaintext sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput sentence one:\033[0m\t";
-		std::getline(std::cin, m1);
+		//std::getline(std::cin, m1);
 		std::cout << "\n\x1b[12;1;38;2;85;255;85minput sentence two:\x1b[0m\t";
-		std::getline(std::cin, m2);
+		//std::getline(std::cin, m2);
 		std::cout << "\n\x1b[38;2;16;124;224mInput key as hexadecimal, press enter to generate one, key has to be the same length as the message\ninput:\x1b[0m\t";
-		std::getline(std::cin, __k);
+		//std::getline(std::cin, __k);
 		_len = m1.length(); // 13
 		if(__k == "") {
 			key = gen_priv_key(_len);
@@ -826,7 +895,7 @@ int main(int argc, char *argv[])
 			if(t_count >= thr_count) {
 				while (t_count != t_count%thr_count) {
 					for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) {
-						threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
+						threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i, std::ref(ord_w_ind), m1m2);
 						ord_w_i++;
 					}
 					for(uint32_t i=pos_start_ind;i<pos_start_ind+thr_count;i++) threads[i].join();
@@ -840,7 +909,7 @@ int main(int argc, char *argv[])
 			uint32_t cond = t_count%thr_count;
 			if(cond != 0) {
 				for(uint32_t i=pos_start_ind;i<cond;i++) {
-					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i);
+					threads[i] = std::thread(init_pos_sent, std::ref(ord_w), sizes, sizes_len, len, i, std::ref(ord_w_ind), m1m2);
 				}
 				for(uint32_t i=pos_start_ind;i<cond;i++) threads[i].join();
 				t_count -= cond;
