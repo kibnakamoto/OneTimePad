@@ -1,16 +1,6 @@
 # OneTimePad
 
 
-
-    ...   :::.    :::..,:::::::::::::::::::::.        :  .,::::::::::::::::. :::.   :::::::-.      .,::::::    .,::      .:::::::::::. :::         ...     :::::::::::::::
- .;;;;;;;.`;;;;,  `;;;;;;;'''';;;;;;;;'''';;;;;,.    ;;; ;;;;'''' `;;;```.;;;;;`;;   ;;,   `';,    ;;;;''''    `;;;,  .,;;  `;;;```.;;;;;;      .;;;;;;;.  ;;;;;;;;;;;''''
-,[[     \[[,[[[[[. '[[ [[cccc      [[     [[[[[[[, ,[[[[, [[cccc   `]]nnn]]',[[ '[[, \\`[[     [[     [[cccc       '[[,,[['    `]]nnn]]' [[[     ,[[     \\[[,[[[     [[     
-$$$,     $$$$$$ "Y$c$$ $$""""      $$     $$$$$$$$$$$"$$$ $$""""    $$$""  c$$$cc$$$c $$,    $$     $$""""        Y$$$P       $$$""    $$'     $$$,     $$$$$$     $$     
-"888,_ _,88P888    Y88 888oo,__    88,    888888 Y88" 888o888oo,__  888o    888   888,888_,o8P'     888oo,__    oP"``"Yo,     888o    o88oo,.__"888,_ _,88P888     88,    
-  "YMMMMMP" MMM     YM """"YUMMM   MMM    MMMMMM  M'  "MMM""""YUMMM YMMMb   YMM   ""` MMMMP"`       """"YUMMM,m"       "Mm,   YMMMb   """"YUMMM  "YMMMMMP" MMM     MMM    
-
-
-
 Why you shouldn't use the same key twice when using One time pad encryption scheme. 
 
 Code is designed for Linux (Ubuntu) & Unix based OSs. Will not work on Windows.
