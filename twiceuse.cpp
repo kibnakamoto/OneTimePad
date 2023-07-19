@@ -28,6 +28,8 @@
 #include <fstream>
 #include <filesystem>
 #include <signal.h>
+#include <sys/sysinfo.h>
+
 
 #if defined(__unix__) || defined(__linux__) || defined(__MACH__)
 	#if __cplusplus <= 201703L
@@ -333,8 +335,14 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 void init_pos_sent(std::vector<std::array<std::string, 2>> &ord_w, uint32_t *sizes, uint32_t sizes_len,
 				   uint32_t len, uint32_t thr_num, std::vector<uint32_t> &ord_w_ind, std::string m1m2)
 {
-	uint64_t ram_available = ((uint64_t)sysconf (_SC_PHYS_PAGES) * sysconf (_SC_PAGESIZE));
-	std::cout << "\nTotal Ram Available:\t" << ram_available << "B\n";
+	struct sysinfo mem_info;
+	uint64_t total_ram = mem_info.totalram+mem_info.totalswap;
+	uint64_t ram_available;
+	do {
+	sysinfo (&mem_info);
+	ram_available = mem_info.freeswap+mem_info.freeram;
+
+	std::cout << "\nRam Available:\t" << ram_available << "B\n";
 	try_combinations(sizes, sizes_len, thr_num, ord_w, ord_w_ind, len, m1m2);
 	std::cout << "\nfinished thread " << thr_num;
 }
