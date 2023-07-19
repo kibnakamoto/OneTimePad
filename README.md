@@ -3,6 +3,8 @@
 
 Why you shouldn't use the same key twice when using One time pad encryption scheme. 
 
+This tool is also a really good password generator. Remember two catch-phrases, these catch-phrases can generate even millions of passwords and if the catch-phrase is private, no one else can figure them out. It is kind of like hashing. Also remember a linenumber so you know which sentence it is. Only that one catch phrase can generate that specific sentence. Longer the catch-phrase, longer the password, less meaningful words in the catch-phrase, the more gibberish the password.
+
 Rather than cracking a human readable sentence, this tool is more suitable for cracking passwords
 
 Code is designed for Linux (Ubuntu) & Unix based OSs. Will not work on Windows.
