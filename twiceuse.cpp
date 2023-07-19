@@ -298,12 +298,9 @@ int main(int argc, char *argv[])
 	std::string eq;
 	uint32_t _len;
 	std::cout << "\nEnter (\x1b[5;1;38;2;16;255;22mC\x1b[0m)iphertext or (\033[5;1;38;2;255;16;22mP\033[0m)laintext of two sentences\ninput:\t";
-	//std::getline(std::cin, mode);
-	mode[0] = 'p';
+	std::getline(std::cin, mode);
 	if(mode[0] == 'p' or mode[0] == 'P') {
 		std::string __k;
-		m1 = "niggas in paris";
-		m2 = "paris in niggas";
 		std::cout << "\n\x1b[38;2;16;124;224mEnter two plaintext sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput sentence one:\033[0m\t";
 		//std::getline(std::cin, m1);
 		std::cout << "\n\x1b[12;1;38;2;85;255;85minput sentence two:\x1b[0m\t";
