@@ -12,6 +12,7 @@ from secrets import choice, randbelow
 from decimal import Decimal
 import time
 import re
+import sys
 
 dot_arts = [
 '''
@@ -165,7 +166,7 @@ print("\n\x1b[1;31mm1 xor m2 (m1m2):\t\x1b[0m\033[37;1m ", m1m2_tmp, "\033[0m")
 print()
 
 inc = 100//length
-
+start_time = time.time()
 # Data format: index: {x,y} where x xor y = m1m2. X and Y = can be plaintexts and ciphertexts (with same key). results in the same OneTimePad Exploit
 pt1_progress_bar = ""
 # first use bigrams
@@ -198,8 +199,12 @@ with open("out/bigrams.txt", "r") as f:
         bigrams_p1.append(first)
         bigrams_p2.append(second)
         all_lines += line + "\n"
-    
+
+    sys.stdout.write("\r")
+    sys.stdout.write("\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m" % ("", 0))
+
     with open(f"out/bigram.py", "w") as file:
+        file.write(f"import sys\n")
         file.write('''def onetimepad(x:str,y:str) -> str:
     ret = ""
     for i in range(len(x)):
@@ -221,18 +226,6 @@ with open("out/bigrams.txt", "r") as f:
                 num += sizes[i+1]
             prev_num += sizes[i]
         tabs = len(sizes)*"    " + "    "
-        # file.write(f"{tabs}tmp = ")
-        # for i in range(len(sizes)-1):
-        #     file.write(f"b1[i{i}]")
-        #     if i < len(sizes)-2:
-        #         file.write(" + ")
-        # file.write("+ \" : \" + ")
-
-        # for i in range(len(sizes)-1):
-        #     file.write(f"b2[i{i}]")
-        #     if i < len(sizes)-2:
-        #         file.write(" + ")
-        # file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
         file.write(f"{tabs}string = list(\" \"*{length})")
         file.write(f"\n{tabs}string2 = list(\" \"*{length})")
         file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[0]}") # do while
@@ -248,21 +241,26 @@ with open("out/bigrams.txt", "r") as f:
             file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
             file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
         file.write(f"\n{tabs}for ind in range({length}):")
-        file.write(f"\n{tabs}    if hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
-        file.write(f"\n{tabs}        for i in range(256):") 
-        file.write(f"\n{tabs}            if 32 ^ i == int(m1m2[ind], 16):") # 32 is ' '
+        file.write(f"\n{tabs}    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
+        file.write(f"\n{tabs}        number = 32") # 32 is ' '
+        file.write(f"\n{tabs}        for i in range(97,122):") 
+        file.write(f"\n{tabs}            if number ^ i == int(m1m2[ind], 16):") # generate index from ascii encoding 65 to 123 (common letters and symbols)
         if randbelow(2) == 1: # flip coin to see who should get space
-            file.write(f"\n{tabs}                string[ind] = \' \'")
+            file.write(f"\n{tabs}                string[ind] = chr(number)")
             file.write(f"\n{tabs}                string2[ind] = chr(i)")
             file.write(f"\n{tabs}                break")
         else:
-            file.write(f"\n{tabs}                string2[ind] = \' \'")
+            file.write(f"\n{tabs}                string2[ind] = chr(number)")
             file.write(f"\n{tabs}                string[ind] = chr(i)")
             file.write(f"\n{tabs}                break")
         file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
-        file.write(f"\n{tabs}print(strings)")
-        file.write(f"\n{tabs}if not strings in f.read():")
-        file.write(f"\n{tabs}    f.write(strings + \"\\n\")")
+        # file.write(f"\n{tabs}print(strings)")
+        #file.write(f"\n{tabs}if not strings in open(\"out/bigram_out.txt\").read():")
+        file.write(f"\n{tabs}f.write(strings + \"\\n\")")
+        file.write(f"\n        progress=(i0+1)*100//({sizes[0]})")
+        file.write(f"\n        progress_bar=\"_\"*progress")
+        file.write(f"\n        sys.stdout.write(f\"\\r\")")
+        file.write(f"\n        sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))")
     exec(open("out/bigram.py").read()) # run the file
 
     #with open("out/bigram_out.txt", "r+") as f:
@@ -275,4 +273,4 @@ with open("out/bigrams.txt", "r") as f:
 
             # every data is now correct
             # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
-
+    print("\n\x1b[1;5;34mFinished in \t\x1b[0m\033[37;1m ", Decimal(time.time()-start_time), "\033[0m\x1b[1;34ms\x1b[0m")
