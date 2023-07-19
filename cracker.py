@@ -12,8 +12,11 @@ from secrets import randbelow
 from decimal import Decimal
 import time
 import sys
+import readline
 
 import dotart
+
+options = ["--no-fill"]
 
 def onetimepad(x:str,y:str) -> str:
     ret = ""
@@ -39,11 +42,12 @@ def unieqe_len(lst):
         i+=1
     return sizes
 
+
 # seperate every ith value
 def sep(string, i=2) -> list:
     lst = []
-    for j in range(0, len(string), 2):
-        lst.append(string[j:j+2])
+    for j in range(0, len(string), i):
+        lst.append(string[j:j+i])
     return lst
 
 def warning(msg):
@@ -70,8 +74,7 @@ with open("out/data.txt", "r") as f:
     ct1 = bytes(bytearray.fromhex(ct1_tmp))
     ct2 = bytes(bytearray.fromhex(ct2_tmp))
 
-pt1 = ""
-pt2 = ""
+
 print("\033[1;32mlength of message:\t\033[0m", length)
 print("\n\x1b[1;31mciphertext 1(ct1):\t\x1b[0m\033[37;1m ", ct1_tmp, "\033[0m")
 print("\x1b[1;31mciphertext 2 (ct2):\t\x1b[0m\033[37;1m ", ct2_tmp, "\033[0m")
@@ -117,7 +120,7 @@ with open("out/bigrams.txt", "r") as f:
     sys.stdout.write("\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m" % ("", 0))
 
     with open("out/bigram.py", "w") as file:
-        file.write(f"import sys\n")
+        file.write("import sys\n")
         file.write('''def onetimepad(x:str,y:str) -> str:
     ret = ""
     for i in range(len(x)):
@@ -153,28 +156,29 @@ with open("out/bigrams.txt", "r") as f:
                 file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
             file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
             file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
-        file.write(f"\n{tabs}for ind in range({length}):")
-        file.write(f"\n{tabs}    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
-        file.write(f"\n{tabs}        number = 32") # 32 is ' '
-        file.write(f"\n{tabs}        for i in range(97,122):") 
-        file.write(f"\n{tabs}            if number ^ i == int(m1m2[ind], 16):") # generate index from ascii encoding 65 to 123 (common letters and symbols)
-        if randbelow(2) == 1: # flip coin to see who should get space
-            file.write(f"\n{tabs}                string[ind] = chr(number)")
-            file.write(f"\n{tabs}                string2[ind] = chr(i)")
-            file.write(f"\n{tabs}                break")
-        else:
-            file.write(f"\n{tabs}                string2[ind] = chr(number)")
-            file.write(f"\n{tabs}                string[ind] = chr(i)")
-            file.write(f"\n{tabs}                break")
+        if "--no-fill" not in sys.argv:
+            file.write(f"\n{tabs}for ind in range({length}):")
+            file.write(f"\n{tabs}    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
+            file.write(f"\n{tabs}        number = 32") # 32 is ' '
+            file.write(f"\n{tabs}        for i in range(97,122):") 
+            file.write(f"\n{tabs}            if number ^ i == int(m1m2[ind], 16):") # generate index from ascii encoding 65 to 123 (common letters and symbols)
+            if randbelow(2) == 1: # flip coin to see who should get space
+                file.write(f"\n{tabs}                string[ind] = chr(number)")
+                file.write(f"\n{tabs}                string2[ind] = chr(i)")
+                file.write(f"\n{tabs}                break")
+            else:
+                file.write(f"\n{tabs}                string2[ind] = chr(number)")
+                file.write(f"\n{tabs}                string[ind] = chr(i)")
+                file.write(f"\n{tabs}                break")
         file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
         # file.write(f"\n{tabs}print(strings)")
-        #file.write(f"\n{tabs}if not strings in open(\"out/bigram_out.txt\").read():")
         file.write(f"\n{tabs}f.write(strings + \"\\n\")")
         file.write(f"\n        progress=(i0+1)*100//({sizes[0]})")
         file.write("\n        progress_bar=\"_\"*progress")
         file.write("\n        sys.stdout.write(f\"\\r\")")
         file.write("\n        sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))")
-    exec(open("out/bigram.py").read()) # run the file
+    with open("out/bigram.py") as f:
+        exec(f.read()) # run the file
 
     print("\n\x1b[1;5;34mFinished in \t\x1b[0m\033[37;1m ", Decimal(time.time()-start_time), "\033[0m\x1b[1;34ms\x1b[0m")
 

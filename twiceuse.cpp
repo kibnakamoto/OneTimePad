@@ -15,7 +15,7 @@
 #include <stdint.h>
 #include <random>
 #include <memory>
-#include <string>
+#include <string.h>
 #include <iomanip>
 #include <sstream>
 #include <array>
@@ -49,7 +49,7 @@ class OneTimePadError : public std::runtime_error {
 	public: explicit OneTimePadError(const char *str) : std::runtime_error(str) {}
 };
 	
-
+bool nofill = 0;
 
 // required libraries: jq
 
@@ -281,22 +281,24 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
              << "\n" << tabs << "    if string2[ind+i] == \' \':"
              << "\n" << tabs << "        string2[ind+i] = ord_w1[i" << i <<"][i]";
 	}
-	file << "\n" << tabs << "for ind in range(" << len << "):"
-	     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
-	     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
-	     << "\n" << tabs << "        for i in range(97,122):"
-	     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
-    std::random_device randDev;
-    std::mt19937 generator(randDev() ^ time(NULL));
-    std::uniform_int_distribution<uint8_t> distr;
-	if(distr(generator)%2) {
-	    file << "\n" << tabs << "                string[ind] = chr(number)"
-	         << "\n" << tabs << "                string2[ind] = chr(i)"
-	         << "\n" << tabs << "                break";
-	} else {
-    	file << "\n" << tabs << "                string2[ind] = chr(number)"
-    	        "\n" << tabs << "                string[ind] = chr(i)"
-    	        "\n" << tabs << "                break";
+	if (not nofill) {
+		file << "\n" << tabs << "for ind in range(" << len << "):"
+		     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
+		     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
+		     << "\n" << tabs << "        for i in range(97,122):"
+		     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
+    	std::random_device randDev;
+    	std::mt19937 generator(randDev() ^ time(NULL));
+    	std::uniform_int_distribution<uint8_t> distr;
+		if(distr(generator)%2) {
+		    file << "\n" << tabs << "                string[ind] = chr(number)"
+		         << "\n" << tabs << "                string2[ind] = chr(i)"
+		         << "\n" << tabs << "                break";
+		} else {
+    		file << "\n" << tabs << "                string2[ind] = chr(number)"
+    		        "\n" << tabs << "                string[ind] = chr(i)"
+    		        "\n" << tabs << "                break";
+		}
 	}
 
 	file << "\n" << tabs << "strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\""
@@ -364,18 +366,15 @@ int main(int argc, char *argv[])
 	uint32_t _len;
 	system("python3 dotart.py");
 	std::cout << "\nEnter (\x1b[5;1;38;2;16;255;22mC\x1b[0m)iphertext or (\033[5;1;38;2;255;16;22mP\033[0m)laintext of two sentences\ninput:\t";
-	//std::getline(std::cin, mode);
-	mode[0] = 'p';
-	m1 = "niggas in paris";
-	m2 = "paris in niggas";
+	std::getline(std::cin, mode);
 	if(mode[0] == 'p' or mode[0] == 'P') {
 		std::string __k;
 		std::cout << "\n\x1b[38;2;16;124;224mEnter two plaintext sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput sentence one:\033[0m\t";
-		//std::getline(std::cin, m1);
+		std::getline(std::cin, m1);
 		std::cout << "\n\x1b[12;1;38;2;85;255;85minput sentence two:\x1b[0m\t";
-		//std::getline(std::cin, m2);
+		std::getline(std::cin, m2);
 		std::cout << "\n\x1b[38;2;16;124;224mInput key as hexadecimal, press enter to generate one, key has to be the same length as the message\ninput:\x1b[0m\t";
-		//std::getline(std::cin, __k);
+		std::getline(std::cin, __k);
 		_len = m1.length(); // 13
 		if(__k == "") {
 			key = gen_priv_key(_len);
@@ -656,7 +655,16 @@ int main(int argc, char *argv[])
 		// CLI for removing certain values based on how much they make sense to the user after
 		// concatination of ord_w elements. This is mostly to decrease the amount of threads running
 		// so that any device can run the code.
-		const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
+		// const bool args = argc == 2 and argv[1][0] != 48; // 48 = '0'
+		bool args=0;
+		
+		if(argc > 1) {
+			for(int i=1;i<argc;i++) {
+				if(strcmp(argv[i],"1") == 0) args=1;
+				if(strcmp(argv[i],"--no-fill") == 0) nofill=1;
+			}
+		}
+		//exit(EXIT_FAILURE);
 		while(args) {
 			print_ord_w(ord_w, ord_w_ind);
 			uint32_t v = 0;
