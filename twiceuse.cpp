@@ -302,9 +302,9 @@ int main(int argc, char *argv[])
 	if(mode[0] == 'p' or mode[0] == 'P') {
 		std::string __k;
 		std::cout << "\n\x1b[38;2;16;124;224mEnter two plaintext sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput sentence one:\033[0m\t";
-		//std::getline(std::cin, m1);
+		std::getline(std::cin, m1);
 		std::cout << "\n\x1b[12;1;38;2;85;255;85minput sentence two:\x1b[0m\t";
-		//std::getline(std::cin, m2);
+		std::getline(std::cin, m2);
 		std::cout << "\n\x1b[38;2;16;124;224mInput key as hexadecimal, press enter to generate one, key has to be the same length as the message\ninput:\x1b[0m\t";
 		std::getline(std::cin, __k);
 		_len = m1.length(); // 13
