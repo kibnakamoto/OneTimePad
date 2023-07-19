@@ -606,17 +606,19 @@ int main(int argc, char *argv[])
 					} else if(input == "") {
 						std::cout << "\b" << std::flush;
 					} else if(input == "c") { // continue the loop, by increasing n and dependants of n
-						if(v<ord_w.size()-sizes[sizes_len-1]) {
+						if(v+1<ord_w.size()-sizes[sizes_len-1]) {
 							// calculate sizes[i] for loop j for combinations
-							if(ord_w_ind[v] != sizes_index) sizes_index++;
+							if(ord_w_ind[v] != ord_w_ind[v+1]) sizes_index++;
+							warning(std::to_string(sizes_index));
 							if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index];
 						} else {
 							std::cout << std::flush
-									  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
+									  << "\ncombinations iteration done. Type \"r\" to reset loop. Type \"exit\" to exit\n";
+							delete[] comb;
+							goto first_for_loop;
 						}
 						delete[] comb;
 						v++;
-						if(sizes_index >= sizes_len) goto first_for_loop; // problem is caused by sizes[sizes_index], sizes_index >= sizes_len
 						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index];j++) {
 							std::string format = "\033[38;2;16;124;224";
 							if(j%2 == 0) format += ";5m"; // print format for making every 2 values blink
