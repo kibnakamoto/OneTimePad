@@ -263,14 +263,16 @@ with open("out/bigrams.txt", "r") as f:
         file.write(f"\n        sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))")
     exec(open("out/bigram.py").read()) # run the file
 
-    #with open("out/bigram_out.txt", "r+") as f:
-    #    # check the indexes and correct them
-    #    lines = f.readlines()
-    #    for line in lines:
-    #        part = line.partition(" : ")
-    #        msg1 = part[0]
-    #        msg2 = part[2]
-
-            # every data is now correct
-            # to use the bigrams, ask the user for their own data. For context of the message, then try to generate sentences using that. Then compare the data. if any data matches, use it
     print("\n\x1b[1;5;34mFinished in \t\x1b[0m\033[37;1m ", Decimal(time.time()-start_time), "\033[0m\x1b[1;34ms\x1b[0m")
+
+    print("\n\x1b[1;32mData successfully Generated...\x1b[0m")
+    print("\n\x1b[1;mAll sentences generated satisfy the requirement of m1m2, the raw data can be processed at your own discression...\x1b[0m")
+    print("\n\x1b[1;mThe data is saved in out/bigram_out.txt\x1b[0m")
+
+    # with open("out/bigram_out.txt", "r+") as f:
+    #     # check the indexes and correct them
+    #     lines = f.readlines()
+    #     for line in lines:
+    #         part = line.partition(" : ")
+    #         msg1 = part[0]
+    #         msg2 = part[2]
