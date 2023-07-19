@@ -235,11 +235,17 @@ with open("out/bigrams.txt", "r") as f:
         # file.write(f"\n{tabs}f.write(tmp + \"\\n\")")
         file.write(f"{tabs}string = list(\" \"*{length})")
         file.write(f"\n{tabs}string2 = list(\" \"*{length})")
-        for i in range(len(sizes)):
+        file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[0]}") # do while
+        file.write(f"\n{tabs}string[ind] = b1[i0][0]")
+        file.write(f"\n{tabs}string[ind+1] = b1[i0][1]")
+        file.write(f"\n{tabs}string2[ind] = b2[i0][0]")
+        file.write(f"\n{tabs}string2[ind+1] = b2[i0][1]")
+        for i in range(1, len(sizes)):
             file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[i]}")
-            file.write(f"\n{tabs}string[ind] = b1[i{i}][0]")
+            if list(set(bigram_indexes))[i-1]+1 != list(set(bigram_indexes))[i]: # to make sure the whole bigram is added rather than one byte replaced later
+                file.write(f"\n{tabs}string[ind] = b1[i{i}][0]")
+                file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
             file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
-            file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
             file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
         file.write(f"\n{tabs}for ind in range({length}):")
         file.write(f"\n{tabs}    if hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
