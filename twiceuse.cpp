@@ -298,13 +298,16 @@ int main(int argc, char *argv[])
 	std::string eq;
 	uint32_t _len;
 	std::cout << "\nEnter (\x1b[5;1;38;2;16;255;22mC\x1b[0m)iphertext or (\033[5;1;38;2;255;16;22mP\033[0m)laintext of two sentences\ninput:\t";
-	std::getline(std::cin, mode);
+	//std::getline(std::cin, mode);
+	mode[0] = 'p';
 	if(mode[0] == 'p' or mode[0] == 'P') {
 		std::string __k;
+		m1 = "niggas in paris";
+		m2 = "paris in niggas";
 		std::cout << "\n\x1b[38;2;16;124;224mEnter two plaintext sentences of the same length\x1b[0m\n\033[1;38;2;255;16;22minput sentence one:\033[0m\t";
-		std::getline(std::cin, m1);
+		//std::getline(std::cin, m1);
 		std::cout << "\n\x1b[12;1;38;2;85;255;85minput sentence two:\x1b[0m\t";
-		std::getline(std::cin, m2);
+		//std::getline(std::cin, m2);
 		std::cout << "\n\x1b[38;2;16;124;224mInput key as hexadecimal, press enter to generate one, key has to be the same length as the message\ninput:\x1b[0m\t";
 		std::getline(std::cin, __k);
 		_len = m1.length(); // 13
@@ -608,15 +611,16 @@ int main(int argc, char *argv[])
 					} else if(input == "c") { // continue the loop, by increasing n and dependants of n
 						if(v<ord_w.size()-sizes[sizes_len-1]) {
 							// calculate sizes[i] for loop j for combinations
-							sizes_index = ord_w_ind[v];
-							if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index+1];
+							if(ord_w_ind[v] != sizes_index) sizes_index++;
+							if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index];
 						} else {
 							std::cout << std::flush
 									  << "\ncombinations iteration done, type \"r\" to reset it, type \"exit\" to exit\n";
 						}
 						delete[] comb;
 						v++;
-						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
+						if(sizes_index >= sizes_len) goto first_for_loop; // problem is caused by sizes[sizes_index], sizes_index >= sizes_len
+						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index];j++) {
 							std::string format = "\033[38;2;16;124;224";
 							if(j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 							else format += "m";
