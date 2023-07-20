@@ -135,48 +135,53 @@ with open("out/bigrams.txt", "r") as f:
         sizes = unieqe_len(bigram_indexes)
         num = sizes[0]
         prev_num = 0
+        tabs = "    "
 
         for i in range(len(sizes)):
-            file.write("    "*(i+1) + f"for i{i} in range({prev_num}, {num}):\n")
+            file.write(f"\n{tabs}def process{i}({''.join('i' + str(j) + ', ' for j in range(i))[:-2]}):\n{tabs*2}for i{i} in range({prev_num}, {num}):\n")
             if i != len(sizes)-1:
                 num += sizes[i+1]
-            prev_num += sizes[i]
-        tabs = len(sizes)*"    " + "    "
-        file.write(f"{tabs}string = list(\" \"*{length})")
-        file.write(f"\n{tabs}string2 = list(\" \"*{length})")
-        file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[0]}") # do while
-        file.write(f"\n{tabs}string[ind] = b1[i0][0]")
-        file.write(f"\n{tabs}string[ind+1] = b1[i0][1]")
-        file.write(f"\n{tabs}string2[ind] = b2[i0][0]")
-        file.write(f"\n{tabs}string2[ind+1] = b2[i0][1]")
-        for i in range(1, len(sizes)):
-            file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[i]}")
-            if list(set(bigram_indexes))[i-1]+1 != list(set(bigram_indexes))[i]: # to make sure the whole bigram is added rather than one byte replaced later
-                file.write(f"\n{tabs}string[ind] = b1[i{i}][0]")
-                file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
-            file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
-            file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
-        if "--no-fill" not in sys.argv:
-            file.write(f"\n{tabs}for ind in range({length}):")
-            file.write(f"\n{tabs}    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
-            file.write(f"\n{tabs}        number = 32") # 32 is ' '
-            file.write(f"\n{tabs}        for i in range(97,122):") 
-            file.write(f"\n{tabs}            if number ^ i == int(m1m2[ind], 16):") # generate index from ascii encoding 65 to 123 (common letters and symbols)
-            if randbelow(2) == 1: # flip coin to see who should get space
-                file.write(f"\n{tabs}                string[ind] = chr(number)")
-                file.write(f"\n{tabs}                string2[ind] = chr(i)")
-                file.write(f"\n{tabs}                break")
+                file.write(f"{tabs*3}process{i+1}({''.join('i' + str(j) + ', ' for j in range(i+1))[:-2]})")
             else:
-                file.write(f"\n{tabs}                string2[ind] = chr(number)")
-                file.write(f"\n{tabs}                string[ind] = chr(i)")
-                file.write(f"\n{tabs}                break")
-        file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
-        # file.write(f"\n{tabs}print(strings)")
-        file.write(f"\n{tabs}f.write(strings + \"\\n\")")
-        file.write(f"\n        progress=(i0+1)*100//({sizes[0]})")
-        file.write("\n        progress_bar=\"_\"*progress")
-        file.write("\n        sys.stdout.write(f\"\\r\")")
-        file.write("\n        sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))")
+                tabs = tabs*3
+                file.write(f"{tabs}string = list(\" \"*{length})")
+                file.write(f"\n{tabs}string2 = list(\" \"*{length})")
+                file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[0]}") # do while
+                file.write(f"\n{tabs}string[ind] = b1[i0][0]")
+                file.write(f"\n{tabs}string[ind+1] = b1[i0][1]")
+                file.write(f"\n{tabs}string2[ind] = b2[i0][0]")
+                file.write(f"\n{tabs}string2[ind+1] = b2[i0][1]")
+                for i in range(1, len(sizes)):
+                    file.write(f"\n{tabs}ind = {list(set(bigram_indexes))[i]}")
+                    if list(set(bigram_indexes))[i-1]+1 != list(set(bigram_indexes))[i]: # to make sure the whole bigram is added rather than one byte replaced later
+                        file.write(f"\n{tabs}string[ind] = b1[i{i}][0]")
+                        file.write(f"\n{tabs}string2[ind] = b2[i{i}][0]")
+                    file.write(f"\n{tabs}string[ind+1] = b1[i{i}][1]")
+                    file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
+                if "--no-fill" not in sys.argv:
+                    file.write(f"\n{tabs}for ind in range({length}):")
+                    file.write(f"\n{tabs}    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
+                    file.write(f"\n{tabs}        number = 32") # 32 is ' '
+                    file.write(f"\n{tabs}        for i in range(97,122):") 
+                    file.write(f"\n{tabs}            if number ^ i == int(m1m2[ind], 16):") # generate index from ascii encoding 65 to 123 (common letters and symbols)
+                    if randbelow(2) == 1: # flip coin to see who should get space
+                        file.write(f"\n{tabs}                string[ind] = chr(number)")
+                        file.write(f"\n{tabs}                string2[ind] = chr(i)")
+                        file.write(f"\n{tabs}                break")
+                    else:
+                        file.write(f"\n{tabs}                string2[ind] = chr(number)")
+                        file.write(f"\n{tabs}                string[ind] = chr(i)")
+                        file.write(f"\n{tabs}                break")
+                file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
+                # file.write(f"\n{tabs}print(strings)")
+                file.write(f"\n{tabs}f.write(strings + \"\\n\")")
+            if i == 0:
+                file.write(f"\n{tabs*3}progress=(i0+1)*100//({sizes[0]})")
+                file.write(f"\n{tabs*3}progress_bar=\"_\"*progress")
+                file.write(f"\n{tabs*3}sys.stdout.write(f\"\\r\")")
+                file.write(f"\n{tabs*3}sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))\n")
+            prev_num += sizes[i]
+        file.write("\n    process0()")
     with open("out/bigram.py") as f:
         exec(f.read()) # run the file
 
