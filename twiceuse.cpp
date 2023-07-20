@@ -257,61 +257,73 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
     file << "]\nsys.stdout.write(f\"\\n\\r\")"
          << "\nsys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (\"\", 0))";
 	file << "\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
-	std::string tabs = "";
+	std::string tabs = "    ";
 	uint32_t num = sizes[0];
                     
 	// write the nested loops
 	for(uint32_t i=1;i<sizes_len;i++) {
-		file << tabs << "for i" << i-1 << " in range(" << num << ", " << num+sizes[i] << "):\n";
-		if (i >= 1) num += sizes[i];
-		tabs += "    ";
-	}
-    file << "\n" << tabs << "string = list(\" \"*" << len << ")"
-    	 << "\n" << tabs << "string2 = list(\" \"*" << len << ")"
-         << "\n" << tabs << "for i in range(len(ord_w0[" << thread_num << "])):"
-         << "\n" << tabs << "    string[i] = ord_w0[" << thread_num << "][i]"
-         << "\n" << tabs << "    string2[i] = ord_w1[" << thread_num << "][i]"
-         << "\n" << tabs << "ind = list(set(indexes))[0] + " << thread_num
-         << "\n" << tabs << "for i in range(len(ord_w0[i0])):"
-         << "\n" << tabs << "    if string[ind+i] == \' \':"
-         << "\n" << tabs << "        string[ind+i] = ord_w0[i0][i]"
-         << "\n" << tabs << "    if string2[ind+i] == \' \':"
-         << "\n" << tabs << "        string2[ind+i] = ord_w1[i0][i]";
-	for(uint32_t i=1;i<sizes_len-1;i++) {
-        file << "\n" << tabs << "ind = list(set(indexes))[" << i << "]"
-             << "\n" << tabs << "for i in range(len(ord_w0[i" << i <<"])):"
-             << "\n" << tabs << "    if string[ind+i] == \' \':"
-             << "\n" << tabs << "        string[ind+i] = ord_w0[i" << i <<"][i]"
-             << "\n" << tabs << "    if string2[ind+i] == \' \':"
-             << "\n" << tabs << "        string2[ind+i] = ord_w1[i" << i <<"][i]";
-	}
-	if (not nofill) {
-		file << "\n" << tabs << "for ind in range(" << len << "):"
-		     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
-		     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
-		     << "\n" << tabs << "        for i in range(256):" // for letters only, use range(97,122), except this can result in an endless loop
-		     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
-    	std::random_device randDev;
-    	std::mt19937 generator(randDev() ^ time(NULL));
-    	std::uniform_int_distribution<uint8_t> distr;
-		if(distr(generator)%2) {
-		    file << "\n" << tabs << "                string[ind] = chr(number)"
-		         << "\n" << tabs << "                string2[ind] = chr(i)"
-		         << "\n" << tabs << "                break";
-		} else {
-    		file << "\n" << tabs << "                string2[ind] = chr(number)"
-    		        "\n" << tabs << "                string[ind] = chr(i)"
-    		        "\n" << tabs << "                break";
+		std::string parameters = "";
+		for(uint32_t j=1;j<i;j++) {
+			parameters += "i" + std::to_string(j-1);
+			if(j != sizes_len-1) parameters += ", "; 
 		}
-	}
+		file << "\ndef process" << i-1 << "(" << parameters << "):";
+		file << "\n" << tabs << "for i" << i-1 << " in range(" << num << ", " << num+sizes[i] << "):\n";
+		if(i == sizes_len-1) {
+			tabs += tabs;
+    		file << "\n" << tabs << "string = list(\" \"*" << len << ")"
+    			 << "\n" << tabs << "string2 = list(\" \"*" << len << ")"
+    		     << "\n" << tabs << "for i in range(len(ord_w0[" << thread_num << "])):"
+    		     << "\n" << tabs << "    string[i] = ord_w0[" << thread_num << "][i]"
+    		     << "\n" << tabs << "    string2[i] = ord_w1[" << thread_num << "][i]"
+    		     << "\n" << tabs << "ind = list(set(indexes))[0] + " << thread_num
+    		     << "\n" << tabs << "for i in range(len(ord_w0[i0])):"
+    		     << "\n" << tabs << "    if string[ind+i] == \' \':"
+    		     << "\n" << tabs << "        string[ind+i] = ord_w0[i0][i]"
+    		     << "\n" << tabs << "    if string2[ind+i] == \' \':"
+    		     << "\n" << tabs << "        string2[ind+i] = ord_w1[i0][i]";
+			for(uint32_t i=1;i<sizes_len-1;i++) {
+    		    file << "\n" << tabs << "ind = list(set(indexes))[" << i << "]"
+    		         << "\n" << tabs << "for i in range(len(ord_w0[i" << i <<"])):"
+    		         << "\n" << tabs << "    if string[ind+i] == \' \':"
+    		         << "\n" << tabs << "        string[ind+i] = ord_w0[i" << i <<"][i]"
+    		         << "\n" << tabs << "    if string2[ind+i] == \' \':"
+    		         << "\n" << tabs << "        string2[ind+i] = ord_w1[i" << i <<"][i]";
+			}
+			if (not nofill) {
+				file << "\n" << tabs << "for ind in range(" << len << "):"
+				     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
+				     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
+				     << "\n" << tabs << "        for i in range(256):" // for letters only, use range(97,122), except this can result in an endless loop
+				     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
+    			std::random_device randDev;
+    			std::mt19937 generator(randDev() ^ time(NULL));
+    			std::uniform_int_distribution<uint8_t> distr;
+				if(distr(generator)%2) {
+				    file << "\n" << tabs << "                string[ind] = chr(number)"
+				         << "\n" << tabs << "                string2[ind] = chr(i)"
+				         << "\n" << tabs << "                break";
+				} else {
+    				file << "\n" << tabs << "                string2[ind] = chr(number)"
+    				        "\n" << tabs << "                string[ind] = chr(i)"
+    				        "\n" << tabs << "                break";
+				}
+			}
 
-	file << "\n" << tabs << "strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\""
-         << "\n" << tabs << "f.write(strings + \"\\n\")"
-         << "\n" << "    progress=(i0-1)*100//(" << sizes[1] << ")"
-         << "\n" << "    progress_bar=\"_\"*progress"
-         << "\n" << "    sys.stdout.write(f\"\\r\")"
-         << "\n" << "    sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))"
-         << "\n" << "sys.stdout.write(\"\\n\")";
+			file << "\n" << tabs << "strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\""
+    		     << "\n" << tabs << "f.write(strings + \"\\n\")";
+		} else {
+			file << tabs << "    process" << i << "(" << parameters << "i" << i-1 << ")";
+			if(i == 1) {
+		    	file << "\n" << tabs << "    progress=(i0-1)*100//(" << sizes[1] << ")"
+		    	     << "\n" << tabs << "    progress_bar=\"_\"*progress"
+		    	     << "\n" << tabs << "    sys.stdout.write(f\"\\r\")"
+		    	     << "\n" << tabs << "    sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))";
+			}
+		}
+		num += sizes[i];
+	}
+	file << "\nprocess0()\n";
 	file << "\nf.close()\n";
 	file.close();
 	system((std::string("mv py") + std::to_string(thread_num) + std::string(".py out/")).c_str()); // move to out folder
