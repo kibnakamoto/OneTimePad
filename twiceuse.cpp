@@ -254,7 +254,9 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 			if(i != ord_w_ind.size()-1) file << ", ";
 		}
 	}
-	file << "]\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
+    file << "]\nsys.stdout.write(f\"\\n\\r\")"
+         << "\nsys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (\"\", 0))";
+	file << "\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
 	std::string tabs = "";
 	uint32_t num = sizes[0];
                     
@@ -287,7 +289,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		file << "\n" << tabs << "for ind in range(" << len << "):"
 		     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
 		     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
-		     << "\n" << tabs << "        for i in range(97,122):"
+		     << "\n" << tabs << "        for i in range(256):" // for letters only, use range(97,122), except this can result in an endless loop
 		     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
     	std::random_device randDev;
     	std::mt19937 generator(randDev() ^ time(NULL));
@@ -310,20 +312,6 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
          << "\n" << "    sys.stdout.write(f\"\\r\")"
          << "\n" << "    sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))"
          << "\n" << "sys.stdout.write(\"\\n\")";
-	// file << tabs << "tmp = ";
-	// for(uint32_t i=0;i<sizes_len-1;i++) {
-	// 	file << "ord_w0[i" << i << "]";
-	// 	if(i < sizes_len-2) file << " + ";
-	// }
-	// file << " + \" : \" + ";
-	// for(uint32_t i=0;i<sizes_len-1;i++) {
-	// 	file << "ord_w1[i" << i << "]";
-	// 	if(i < sizes_len-2) file << " + ";
-	// }
-	// // file << "\n" << tabs << "if len(tmp) == " << len << ":\n";
-	// // tabs += "\t";
-	// file << "\n" << tabs << "f.write(tmp + \"\\n\")\n";
-	// file << tabs << "print(tmp)";
 	file << "\nf.close()\n";
 	file.close();
 	system((std::string("mv py") + std::to_string(thread_num) + std::string(".py out/")).c_str()); // move to out folder
@@ -336,13 +324,11 @@ void init_pos_sent(std::vector<std::array<std::string, 2>> &ord_w, uint32_t *siz
 				   uint32_t len, uint32_t thr_num, std::vector<uint32_t> &ord_w_ind, std::string m1m2)
 {
 	struct sysinfo mem_info;
-	uint64_t total_ram = mem_info.totalram+mem_info.totalswap;
-	uint64_t ram_available;
-	do {
 	sysinfo (&mem_info);
+	uint64_t ram_available;
 	ram_available = mem_info.freeswap+mem_info.freeram;
 
-	std::cout << "\nRam Available:\t" << ram_available << "B\n";
+	std::cout << "\nRam Available:\t" << ram_available << "B \t\t\ton thread " << thr_num << ".\n";
 	try_combinations(sizes, sizes_len, thr_num, ord_w, ord_w_ind, len, m1m2);
 	std::cout << "\nfinished thread " << thr_num;
 }
