@@ -120,7 +120,7 @@ with open("out/bigrams.txt", "r") as f:
     sys.stdout.write("\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m" % ("", 0))
 
     with open("out/bigram.py", "w") as file:
-        file.write("import sys\n")
+        file.write("import sys\nfrom random import randrange\n")
         file.write('''def onetimepad(x:str,y:str) -> str:
     ret = ""
     for i in range(len(x)):
@@ -139,6 +139,12 @@ with open("out/bigrams.txt", "r") as f:
 
         for i in range(len(sizes)):
             file.write(f"\n{tabs}def process{i}({''.join('i' + str(j) + ', ' for j in range(i))[:-2]}):\n{tabs*2}for i{i} in range({prev_num}, {num}):\n")
+            if i == 0:
+                file.write(f"\n{tabs*3}progress=(i0+1)*100//({sizes[0]})")
+                file.write(f"\n{tabs*3}progress_bar=\"_\"*progress")
+                file.write(f"\n{tabs*3}sys.stdout.write(f\"\\r\")")
+                file.write(f"\n{tabs*3}sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))\n")
+
             if i != len(sizes)-1:
                 num += sizes[i+1]
                 file.write(f"{tabs*3}process{i+1}({''.join('i' + str(j) + ', ' for j in range(i+1))[:-2]})")
@@ -160,18 +166,23 @@ with open("out/bigrams.txt", "r") as f:
                     file.write(f"\n{tabs}string2[ind+1] = b2[i{i}][1]")
                 if "--no-fill" not in sys.argv:
                     file.write(f"\n{tabs}for ind in range({length}):")
+                    file.write(f"\n{tabs}    number = 32")
+                    file.write(f"\n{tabs}    tried = False")
                     file.write(f"\n{tabs}    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:") # if index doesn't match
-                    file.write(f"\n{tabs}        number = 32") # 32 is ' '
                     file.write(f"\n{tabs}        for i in range(97,122):") 
                     file.write(f"\n{tabs}            if number ^ i == int(m1m2[ind], 16):") # generate index from ascii encoding 65 to 123 (common letters and symbols)
                     if randbelow(2) == 1: # flip coin to see who should get space
                         file.write(f"\n{tabs}                string[ind] = chr(number)")
                         file.write(f"\n{tabs}                string2[ind] = chr(i)")
+                        file.write(f"\n{tabs}                tried = True")
                         file.write(f"\n{tabs}                break")
                     else:
                         file.write(f"\n{tabs}                string2[ind] = chr(number)")
                         file.write(f"\n{tabs}                string[ind] = chr(i)")
+                        file.write(f"\n{tabs}                tried = True")
                         file.write(f"\n{tabs}                break")
+                    file.write(f"\n{tabs}        if not tried:")
+                    file.write(f"\n{tabs}            number = randrange(97,122)")
                 file.write(f"\n{tabs}strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\"")
                 # file.write(f"\n{tabs}print(strings)")
                 file.write(f"\n{tabs}f.write(strings + \"\\n\")")
