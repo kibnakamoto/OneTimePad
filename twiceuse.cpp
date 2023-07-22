@@ -254,9 +254,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 			if(i != ord_w_ind.size()-1) file << ", ";
 		}
 	}
-    file << "]\nsys.stdout.write(f\"\\r\")"
-         << "\nsys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (\"\", 0))";
-	file << "\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
+	file << "]\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
 	std::string tabs = "    ";
 	uint32_t num = sizes[0];
                     
@@ -268,6 +266,11 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 			if(j != sizes_len-1) parameters += ", "; 
 		}
 		file << "\ndef process" << i-1 << "(" << parameters << "):";
+
+		if(i == 1) {
+    		file << "\n" << tabs << "sys.stdout.write(f\"\\r\")"
+         		 << "\n" << tabs << "sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (\"\", 0))";
+		}
 		file << "\n" << tabs << "for i" << i-1 << " in range(" << num << ", " << num+sizes[i] << "):\n";
 		if(i == sizes_len-1) {
 			tabs += tabs;
