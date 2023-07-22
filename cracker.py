@@ -138,12 +138,11 @@ with open("out/bigrams.txt", "r") as f:
         tabs = "    "
 
         for i in range(len(sizes)):
-            file.write(f"\n{tabs}def process{i}({''.join('i' + str(j) + ', ' for j in range(i))[:-2]}):\n{tabs*2}for i{i} in range({prev_num}, {num}):\n")
+            file.write(f"\n{tabs}def process{i}({''.join('i' + str(j) + ', ' for j in range(i))[:-2]}):")
             if i == 0:
-                file.write(f"\n{tabs*3}progress=(i0+1)*100//({sizes[0]})")
-                file.write(f"\n{tabs*3}progress_bar=\"_\"*progress")
-                file.write(f"\n{tabs*3}sys.stdout.write(f\"\\r\")")
-                file.write(f"\n{tabs*3}sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))\n")
+                file.write(f"\n{tabs*2}sys.stdout.write(f\"\\r\")")
+                file.write(f"\n{tabs*2}sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (\"\", 0))\n")
+            file.write(f"\n{tabs*2}for i{i} in range({prev_num}, {num}):\n")
 
             if i != len(sizes)-1:
                 num += sizes[i+1]
