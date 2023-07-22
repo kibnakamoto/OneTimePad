@@ -254,7 +254,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 			if(i != ord_w_ind.size()-1) file << ", ";
 		}
 	}
-    file << "]\nsys.stdout.write(f\"\\n\\r\")"
+    file << "]\nsys.stdout.write(f\"\\r\")"
          << "\nsys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (\"\", 0))";
 	file << "\nf = open(\"out/output" << thread_num << ".txt\", \"w\")\n";
 	std::string tabs = "    ";
@@ -292,9 +292,10 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 			}
 			if (not nofill) {
 				file << "\n" << tabs << "for ind in range(" << len << "):"
+				     << "\n" << tabs << "    number = 32"  // 32 is ' '
+				     << "\n" << tabs << "    tried = False"  // 32 is ' '
 				     << "\n" << tabs << "    while hx(onetimepad(string, string2))[ind] != m1m2[ind]:" // if index doesn't match
-				     << "\n" << tabs << "        number = randrange(0,256)"  // 32 is ' '
-				     << "\n" << tabs << "        for i in range(256):" // for letters only, use range(97,122), except this can result in an endless loop
+				     << "\n" << tabs << "        for i in range(97, 122):" // for letters only, use range(97,122), except this can result in an endless loop
 				     << "\n" << tabs << "            if number ^ i == int(m1m2[ind], 16):"; // generate index from ascii encoding 65 to 123 (common letters and symbols)
     			std::random_device randDev;
     			std::mt19937 generator(randDev() ^ time(NULL));
@@ -302,12 +303,16 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 				if(distr(generator)%2) {
 				    file << "\n" << tabs << "                string[ind] = chr(number)"
 				         << "\n" << tabs << "                string2[ind] = chr(i)"
+    				        "\n" << tabs << "                tried = True"
 				         << "\n" << tabs << "                break";
 				} else {
     				file << "\n" << tabs << "                string2[ind] = chr(number)"
     				        "\n" << tabs << "                string[ind] = chr(i)"
+    				        "\n" << tabs << "                tried = True"
     				        "\n" << tabs << "                break";
 				}
+				file << "\n" << tabs << "        if not tried:"
+				     << "\n" << tabs << "            number = randrange(48,129)";
 			}
 
 			file << "\n" << tabs << "strings = \"\\\"\" + \'\'.join(i for i in string) + \"\\\" : \\\"\" + \'\'.join(i for i in string2) + \"\\\"\""
@@ -315,7 +320,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
 		} else {
 			file << tabs << "    process" << i << "(" << parameters << "i" << i-1 << ")";
 			if(i == 1) {
-		    	file << "\n" << tabs << "    progress=(i0-1)*100//(" << sizes[1] << ")"
+		    	file << "\n" << tabs << "    progress=(i0-" << sizes[0]-1 << ")*100//(" << sizes[1] << ")"
 		    	     << "\n" << tabs << "    progress_bar=\"_\"*progress"
 		    	     << "\n" << tabs << "    sys.stdout.write(f\"\\r\")"
 		    	     << "\n" << tabs << "    sys.stdout.write(\"\x1b[4;2;1;38;2;7;224;21m%-100s\t\t\033[1;38;2;7;224;21m%d%%\033[0m\" % (progress_bar, progress))";
@@ -692,7 +697,6 @@ int main(int argc, char *argv[])
 						if(v+1<ord_w.size()-sizes[sizes_len-1]) {
 							// calculate sizes[i] for loop j for combinations
 							if(ord_w_ind[v] != ord_w_ind[v+1]) sizes_index++;
-							warning(std::to_string(sizes_index));
 							if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index];
 						} else {
 							std::cout << std::flush
