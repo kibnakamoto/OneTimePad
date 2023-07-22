@@ -150,6 +150,6 @@ for ind in range(len(m1m2)):
                 break
 ```
 
-NOTE: if the code is never ending, than try to run using --no-fill because there is a possibility that there is no filling possible. Then, the data will not satisfy ```m1 xor m2 = m1m2``` but it will not be stuck in an endless loop. Another thing you can try is to assign number (cracker.py:162) to random.randrange(97,122) for letters only, or set to something like secrets.randbelow(256) for all characters. And assign number in (twiceuse.cpp:289) to randrange(0,256) or set (twiceuse.cpp:290) loop range(97,122) to range(256).
+NOTE: if the code is never ending (if cracker.py isn't writing to out/bigram_out.txt or if twiceuse.cpp generated out/py#.py files aren't generating data into out/output#.txt), than try to run using --no-fill because there is a possibility that there is no filling possible. Then, the data will not satisfy ```m1 xor m2 = m1m2``` but it will not be stuck in an endless loop. Another thing you can try is to assign number (cracker.py:162) to random.randrange(97,122) for letters only, or set to something like secrets.randbelow(256) for all characters. And assign number in (twiceuse.cpp:289) to randrange(0,256) or set (twiceuse.cpp:290) loop range(97,122) to range(256).
 
 If the values provided are already set, then there might not be an endless loop, try a shorter message.
