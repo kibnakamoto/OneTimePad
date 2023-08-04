@@ -7,6 +7,8 @@ This tool is also a really good password generator. Remember two catch-phrases, 
 
 Rather than cracking a human readable sentence, this tool is more suitable for cracking passwords
 
+But, if you give more data, rather than use the current arrays of data (bigrams, trigrams, words), add custom data. It can be more accurate.
+
 Code is designed for Linux (Ubuntu) & Unix based OSs. Will not work on Windows.
 
 Enter two sentences of the same length. They are encrypted using a random key and then the code tries bigrams, trigrams, and a list of over 300 words to find all the possible combinations. There are possible sentences generated into an output file (There can be multiple if there was a need for multiple threads), then the possible sentences are added into a file. If you don't want to see these possible sentences (They aren't accurate), type (n)o after the code is finished.
