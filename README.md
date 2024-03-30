@@ -13,7 +13,36 @@ Code is designed for Linux (Ubuntu) & Unix based OSs. Will not work on Windows.
 
 Enter two sentences of the same length. They are encrypted using a random key and then the code tries bigrams, trigrams, and a list of over 300 words to find all the possible combinations. There are possible sentences generated into an output file (There can be multiple if there was a need for multiple threads), then the possible sentences are added into a file. If you don't want to see these possible sentences (They aren't accurate), type (n)o after the code is finished.
 
+## Initial Data Printout
+when you run the program, you will see stuff like this:
+FOR STRING "abc" TRY1:    ...
+FOR STRING ^ABOVE^ TRY2: ...
+
+this means that if "abc" is xored on every index of m1m2, you will get the TRY1 value, 
+
+xored on every index is reffering to xoring m1 xor m2 with :
+1. abc000
+2. 0abc00
+3. 00abc0
+4. 000abc
+
+(This example shows a 6-byte m1m2, actual sizes vary)
+
+if any of them return a readable looking value, it's added to the list for possible combinations. And the TRY2 value is basically the string that was xored, in this case, "abc",
+
+e.g.
+
+**FOR STRING "in" TRY1:		in in in ij mo
+FOR STRING ^ABOVE^ TRY2:	in in in    in**
+
+in first index, in ^ in is possibly the first 2 digits of m1m2, the fourth value in TRY1 is "ij" which corrosponds to nothing, it's because "in" m1m2 m1m2 = "ij" on the 3rd index. Since "ij" is not considered a logical bigram/trigram/word, the column on TRY2 is empty for this value. for fifth column in TRY1, "in" xor m1m2 = mo, "mo" is considered a possible logical bigram/trigram/word, so it's kept in a possible bigram list which means that TRY2 row has "in" written on fifth column.
+
 if the output#.txt files don't satisfy you, try running the cracker.py in python3 generate possible sentences that satisfy the ```m1 xor m2 = m1m2```. The output
+
+## Extra Data Elimination Process
+
+There is an extra elimination process defined in around line 630, this elimination process is optional, turn it on if you have too much data to process to limit the amount of words generated, the macro is defined after the package includes. It basically checks if the starting letter of the word is one of the top 10 most common sentence starters according to an oxford study.
+
 ## To Generate Possible Sentences Using Bigrams
 
 First compile \& run twiceuse.cpp with the data you want

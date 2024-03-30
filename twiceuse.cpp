@@ -30,6 +30,13 @@
 #include <signal.h>
 #include <sys/sysinfo.h>
 
+/* Comment if extra elimination is wanted
+ * there is an extra elimination process defined in around line 630, this elimination process is optional,
+ * turn it on if you have too much data to process to limit the amount of words generated.
+ * It basically checks if the starting letter of the word is one of the top 10 most common first letters
+ * according to an oxford study.
+ */
+#define EXTRA_ELIMINATION
 
 #if defined(__unix__) || defined(__linux__) || defined(__MACH__)
 	#if __cplusplus <= 201703L
@@ -162,7 +169,7 @@ const std::string trigram[16] = {"the", "and", "tha", "ent", "ing", "ion", "tio"
 // algorithm to try all trigrams and bigrams listed above to crack ciphertext
 std::string *try_all(std::string msg, std::string val)
 {
-	unsigned int len = msg.length()-val.length();
+	unsigned int len = msg.length()-val.length()+1;
 	std::string *tries = new std::string[len];
 	for(unsigned int i=0;i<len;i++) {
 		tries[i] = "";
@@ -439,9 +446,9 @@ int main(int argc, char *argv[])
 	std::vector<std::array<std::string, 2>> possible_words;
 	std::vector<uint32_t> possible_words_ind;
 
-	const unsigned int bi_i = len-2;
+	const unsigned int bi_i = len-1;
 	const constexpr unsigned int bi_len = sizeof(bigram)/sizeof(bigram[0]);
-	const unsigned int tri_i = len-3;
+	const unsigned int tri_i = len-2;
 	const constexpr unsigned int tri_len = sizeof(trigram)/sizeof(trigram[0]);
 	const constexpr unsigned int word_len = std::size(words);
 
@@ -470,7 +477,7 @@ int main(int argc, char *argv[])
 			}
 			if (valid_tries) { // if one of the plaintexts are valid text, try the other plaintext
 				std::string tmp = one_time_pad<std::string>(tries[j], m1m2.substr(j,2), 2);
-				std::cout << tmp; // if tmp = bigram[i], it is correct
+				std::cout << std::setfill(' ') << std::setw(2) << tmp; // if tmp = bigram[i], it is correct
 
 				// if tmp is a syllable in words, it is common and will be allegdly seen as
 				// part of one of the plaintexts
@@ -533,13 +540,20 @@ int main(int argc, char *argv[])
 	for(unsigned int i=0;i<word_len;i++) {
 		if(m1m2.length() < words[i].length()) continue; // skip word if m1m2 length is smaller. To avoid error
 		std::string *tries = try_all(m1m2, words[i]);
-		std::cout << std::endl << "FOR STRING \"" << words[i] << "\" TRY1:\t\t\t";
-		for(unsigned int j=0;j<len-words[i].length();j++) std::cout << tries[j] << " ";
+
+		// calculate length of indendation for TRY1 and TRY2:
+		std::string indent1 = std::string(words[i].length() < 5 ? 5-words[i].length() : 0, ' '); // 5 is the length of word "ABOVE" in TRY2
+		std::string indent2 = std::string(words[i].length() > 5 ? words[i].length()-5 : 0, ' ');
+
+		std::cout << std::endl << "FOR STRING \"" << words[i] << "\"" << indent1 << " TRY1:\t";
+		for(unsigned int j=0;j<len-words[i].length()+1;j++) std::cout << std::setfill(' ')
+																	  << std::setw(words[i].length())
+																	  << tries[j] << " ";
 
 		// calculate second plaintext based on tries on calculating first plaintext, which can
 		// be anything
-		std::cout << std::endl << "FOR STRING ^ABOVE^ TRY2:\t\t\t";
-		for(unsigned int j=0;j<len-words[i].length();j++) {
+		std::cout << std::endl << "FOR STRING ^ABOVE^" << indent2 << " TRY2:\t";
+		for(unsigned int j=0;j<len-words[i].length()+1;j++) {
 			bool valid_tries = false;
 			for(unsigned int k=0;k<word_len;k++) {
 				valid_tries = words[k].find(tries[j]) != std::string::npos;
@@ -548,7 +562,7 @@ int main(int argc, char *argv[])
 			if (valid_tries) {
 				std::string tmp = one_time_pad<std::string>(tries[j], m1m2.substr(j,words[i].length()),
 															words[i].length());
-				std::cout << tmp;
+				std::cout << std::setfill(' ') << std::setw(words[i].length()) << tmp;
 	
 				// if tmp in words, it is common and will be allegedly seen as part of the message
 				for(unsigned int k=0;k<word_len;k++) {
@@ -626,6 +640,7 @@ int main(int argc, char *argv[])
 		sizes = unieqe_len(ord_w_ind, sizes_len);
 
 		//////////////// EXTRA ELIMINITAION-PROCESSES TO SAVE MEMORY AND TIME ////////////////
+#if defined(EXTRA_ELIMINATION) // extra elimination on
 		// make sure the starting index is common
 		for(uint32_t i=0;i<sizes[0];i++) {
 			bool valid_start = 0;
@@ -637,6 +652,7 @@ int main(int argc, char *argv[])
 				ord_w_ind.erase(ord_w_ind.begin()+i);
 			}
 		}
+#endif
 
 		// calculate all possible bigrams on the 0th index
 		std::vector<std::array<std::string, 2>> starting_bigrams;
