@@ -620,7 +620,6 @@ int main(int argc, char *argv[])
 	std::vector<uint32_t> ord_w_ind;
 	max = possible_words_ind.size()==0 ? 0 : *max_element(possible_words_ind.begin(), possible_words_ind.end());
 	index = 0;
-
 	
 	uint32_t sizes_len=0;
 	uint32_t *sizes;
@@ -700,9 +699,48 @@ int main(int argc, char *argv[])
 			uint32_t v = 0;
 			uint32_t sizes_index = 0;
 			uint64_t sizes_till_n = sizes[0];
-			while(v < ord_w.size()-sizes[sizes_len-1]) {
-				std::array<std::string, 2> *comb = new std::array<std::string, 2>[ord_w.size()-1];
+			while(v < ord_w.size()-sizes[sizes_len-1]+1) {
+				std::array<std::string, 4> *comb = new std::array<std::string, 4>[ord_w.size()-1]; // 2 combinations per message (2 m1, 2 m2)=4
 				while(true) {
+					auto combinations = [&](uint32_t j)
+					{
+						// find 2 combinations per message:
+						// uint8_t comb_len = ord_w[v][0].length() + ord_w[j][0].length() - ord_w_ind[j]+ord_w_ind[v]; // length of one combination
+						uint8_t comb_len = ord_w[j][0].length() + ord_w_ind[j] - ord_w_ind[v]; // length of one combination
+						char* combv0 = new char[comb_len];
+						char* combv1 = new char[comb_len];
+						char* combv2 = new char[comb_len];
+						char* combv3 = new char[comb_len];
+						memset(combv0, ' ', comb_len);
+						memset(combv1, ' ', comb_len);
+						memset(combv2, ' ', comb_len);
+						memset(combv3, ' ', comb_len);
+
+						// last overlaps first
+						memcpy(combv0, ord_w[v][0].c_str(), ord_w[v][0].length());
+						memcpy(combv3, ord_w[v][1].c_str(), ord_w[v][1].length());
+
+						memcpy(&combv0[ord_w_ind[j]-ord_w_ind[v]], ord_w[j][0].c_str(), ord_w[j][0].length());
+						memcpy(&combv3[ord_w_ind[j]-ord_w_ind[v]], ord_w[j][1].c_str(), ord_w[j][1].length());
+
+						// first overlaps last
+						memcpy(&combv1[ord_w_ind[j]-ord_w_ind[v]], ord_w[j][0].c_str(), ord_w[j][0].length());
+						memcpy(&combv2[ord_w_ind[j]-ord_w_ind[v]], ord_w[j][1].c_str(), ord_w[j][1].length());
+
+						memcpy(combv1, ord_w[v][0].c_str(), ord_w[v][0].length());
+						memcpy(combv2, ord_w[v][1].c_str(), ord_w[v][1].length());
+
+						comb[v][0] = std::string(combv0, comb_len); // m1
+						comb[v][1] = std::string(combv1, comb_len); // m1
+						comb[v][2] = std::string(combv2, comb_len); // m2
+						comb[v][3] = std::string(combv3, comb_len); // m2
+
+						delete[] combv0;
+						delete[] combv1;
+						delete[] combv2;
+						delete[] combv3;
+					};
+
 					std::string input = "";
 					std::cout << std::endl << "input index to remove or to see certain values:\t";
 					signal(SIGINT, handler);
@@ -713,30 +751,35 @@ int main(int argc, char *argv[])
 					} else if(input == "") {
 						std::cout << "\b" << std::flush;
 					} else if(input == "c") { // continue the loop, by increasing n and dependants of n
-						if(v+1<ord_w.size()-sizes[sizes_len-1]) {
+						if(v<ord_w.size()-sizes[sizes_len-1]) {
 							// calculate sizes[i] for loop j for combinations
-							if(ord_w_ind[v] != ord_w_ind[v+1]) sizes_index++;
-							if(v+1 == sizes_till_n) sizes_till_n += sizes[sizes_index];
+							if(v == sizes_till_n) {
+								sizes_index++;
+								sizes_till_n += sizes[sizes_index];
+							}
 						} else {
 							std::cout << std::flush
 									  << "\ncombinations iteration done. Type \"r\" to reset loop. Type \"exit\" to exit\n";
 							delete[] comb;
 							goto first_for_loop;
 						}
-						delete[] comb;
-						v++;
-						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index];j++) {
+
+						for(uint32_t j=sizes_till_n;j<sizes_till_n+sizes[sizes_index+1];j++) {
 							std::string format = "\033[38;2;16;124;224";
 							if(j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 							else format += "m";
-							comb[v][0] = ord_w[v][0] + ord_w[j][0];
-							comb[v][1] = ord_w[v][1] + ord_w[j][1];
+
+
+							combinations(j);
+
 							std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
-									  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
+									  << comb[v][0] << "\033[31;1m/\033[0m" << comb[v][1] 
+									  << " \033[31;1m:\033[0m " << comb[v][2] << "\033[31;1m/\033[0m" <<  comb[v][3]
 									  << "\t\x1b[37m-1:\x1b[0m" << format << v
 									  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
 									  << "\033[0m" << closed_sq_bracket;
 						}
+						v++;
 						goto first_for_loop;
 					} else if(std::all_of(input.begin(),input.end(), [](char inp) {return isdigit(inp);})) {
 						uint32_t digit = static_cast<uint32_t>(std::stoul(input));
@@ -744,6 +787,10 @@ int main(int argc, char *argv[])
 							ord_w.erase(ord_w.begin()+digit);
 							ord_w_ind.erase(ord_w_ind.begin()+digit);
 							sizes = unieqe_len(ord_w_ind, sizes_len);
+							sizes_index = 0;
+							v = 0;
+							sizes_till_n = sizes[0];
+
 						} else {
 							std::cout << std::endl << "input too large, has to be smaller than "
 									  << ord_w.size();
@@ -762,7 +809,7 @@ int main(int argc, char *argv[])
 							}
 							std::cout << closed_sq_bracket << std::endl;
 						} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'n';})) { // print v
-								std::cout << std::endl << "n:" << v << " - " << ord_w.size()-1-v
+								std::cout << std::endl << "n:" << v << " - " << ord_w.size()-v
 									<< " amount of iterations left, type \"c\" to continue loop"
 										  << " and increment n, type \"r\" to reset n to 0 and re-loop";
 						} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
@@ -775,10 +822,13 @@ int main(int argc, char *argv[])
 								std::string format = "\033[38;2;16;124;224";
 								if (j%2 == 0) format += ";5m"; // print format for making every 2 values blink
 								else format += "m";
-								comb[v][0] = ord_w[v][0] + ord_w[j][0];
-								comb[v][1] = ord_w[v][1] + ord_w[j][1];
-								std::cout << "\n\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
-										  << comb[v][0] << " \033[31;1m:\033[0m " << comb[v][1]
+
+								// find 2 combinations per message:
+								combinations(j);
+
+								std::cout << "\n\t\x1b[38;2;16;124;224mcombination =\x1b[0m " << open_sq_bracket
+										  << comb[v][0] << "\033[31;1m/\033[0m" << comb[v][1] 
+										  << " \033[31;1m:\033[0m " << comb[v][2] << "\033[31;1m/\033[0m" <<  comb[v][3]
 										  << "\t\x1b[37m-1:\x1b[0m" << format << v
 										  << "\033[0m\t\x1b[37m-2:\x1b[0m\033[38;2;16;124;224m" << j
 										  << "\033[0m" << closed_sq_bracket;
@@ -807,6 +857,7 @@ int main(int argc, char *argv[])
 						goto stop;
 					} else if(input == "r") {
 						v = 0;
+						sizes_index=0;
 						sizes_till_n = sizes[0];
 					} else {
 						system("jq . help.json"); // pretty print json
