@@ -227,7 +227,8 @@ void inline warning(const std::string msg) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w, std::vector<uint32_t> &ord_w_ind, uint32_t len, std::string m1m2)
+void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num, std::vector<std::array<std::string, 2>> &ord_w,
+					  std::vector<uint32_t> &ord_w_ind, uint32_t len, std::string m1m2)
 {
 	std::ofstream file("py" + std::to_string(thread_num) + ".py");
 	file << "import sys"
