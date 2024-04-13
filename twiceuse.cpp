@@ -181,7 +181,8 @@ std::pair<std::vector<std::array<std::string,2>>, std::vector<uint32_t>> find_al
 																				 vec,std::vector<
 																				 std::array<
 																				 std::string,2>> 
-																				 strv, uint32_t elem) {
+																				 strv, uint32_t elem)
+{
 	std::vector<std::array<std::string,2>> ret;
 	std::vector<uint32_t> nums;
 	
@@ -633,6 +634,7 @@ int main(int argc, char *argv[])
 		
 
 		// calculate the amount of every unieqe index
+		delete[] sizes;
 		sizes = unieqe_len(ord_w_ind, sizes_len);
 
 		//////////////// EXTRA ELIMINITAION-PROCESSES TO SAVE MEMORY AND TIME ////////////////
@@ -676,6 +678,7 @@ int main(int argc, char *argv[])
 		
 		///////////////// PROBLEM WITH sizes[5] = sizes_till_n updated in UI is caused by how c command is defined later while 
 		// print comes first.
+		delete[] sizes;
 		sizes = unieqe_len(ord_w_ind, sizes_len);
 
 		// CLI for removing certain values based on how much they make sense to the user after
@@ -783,6 +786,7 @@ int main(int argc, char *argv[])
 						if(digit < ord_w.size()) {
 							ord_w.erase(ord_w.begin()+digit);
 							ord_w_ind.erase(ord_w_ind.begin()+digit);
+							delete[] sizes;
 							sizes = unieqe_len(ord_w_ind, sizes_len);
 							sizes_index = 0;
 							v = 0;
@@ -796,6 +800,7 @@ int main(int argc, char *argv[])
 						if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'o';})) { // print ord_w
 							print_ord_w(ord_w, ord_w_ind);
 						} else if(std::any_of(input.begin(),input.end(), [](char inp) {return inp == 'l';})) { // print sizes
+							delete[] sizes;
 							sizes = unieqe_len(ord_w_ind, sizes_len);
 							std::cout << "\nsizes:\t" << open_sq_bracket;
 							for(uint32_t i=0;i<sizes_len;i++) {
@@ -810,6 +815,7 @@ int main(int argc, char *argv[])
 									<< " amount of iterations left, type \"c\" to continue loop"
 										  << " and increment n, type \"r\" to reset n to 0 and re-loop";
 						} else if(std::any_of(input.begin(), input.end(), [](char inp) {return inp == 'c';})) { // print comb
+							delete[] sizes;
 							sizes = unieqe_len(ord_w_ind, sizes_len);
 							std::cout << std::endl << "\x1b[38;2;16;124;224mcombinations:\x1b[0m\t"
 									  << open_curly_bracket << "\n";
@@ -880,6 +886,7 @@ int main(int argc, char *argv[])
 
 
 		// re-calculate sizes since ord_w has been updated
+		delete[] sizes;
 		sizes = unieqe_len(ord_w_ind, sizes_len);
 
 		uint64_t pos_len_thrd = 1;
