@@ -3,15 +3,11 @@
 
 Why you shouldn't use the same key twice when using One time pad encryption scheme. 
 
-This tool is also a really good password generator. Remember two catch-phrases, these catch-phrases can generate even millions of passwords and if the catch-phrase is private, no one else can figure them out. It is kind of like hashing. Also remember a linenumber so you know which sentence it is. Only that one catch phrase can generate that specific sentence. Longer the catch-phrase, longer the password, less meaningful words in the catch-phrase, the more gibberish the password.
-
-Rather than cracking a human readable sentence, this tool is more suitable for cracking passwords
-
-But, if you give more data, rather than use the current arrays of data (bigrams, trigrams, words), add custom data. It can be more accurate.
+When it comes to generating a meaningful sentence, you need to give it more contextually accurate data, rather than use the current arrays of data (in twiceuse.cpp) (bigrams, trigrams, words), add custom data. Re compile with ```sh compile.sh```
 
 Code is designed for Linux (Ubuntu) & Unix based OSs. Will not work on Windows.
 
-Enter two sentences of the same length. They are encrypted using a random key and then the code tries bigrams, trigrams, and a list of over 300 words to find all the possible combinations. There are possible sentences generated into an output file (There can be multiple if there was a need for multiple threads), then the possible sentences are added into a file. If you don't want to see these possible sentences (They aren't accurate), type (n)o after the code is finished.
+Enter two sentences of the same length. They are encrypted using a random key and then the code tries bigrams, trigrams, and a list of over 300 words to find all the possible combinations. There are possible sentences generated into an output file (There can be multiple if there was a need for multiple threads), then the possible sentences are added into a file. If you don't want to see these possible sentences, type (n)o after the code is finished.
 
 ## Initial Data Printout
 when you run the program, you will see stuff like this:
