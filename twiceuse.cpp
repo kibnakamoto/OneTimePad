@@ -38,20 +38,16 @@
  */
 #define EXTRA_ELIMINATION
 
-#if defined(__unix__) || defined(__linux__) || defined(__MACH__)
-	#if __cplusplus <= 201703L
-		#error "\x1b[31;1mC++20 required\x1b[0m"
-	#endif /* __cplusplus <= 201703L */
-#else
+#if	 __cplusplus <= 201703L
+	#error "C++20 required"
+#endif /* __cplusplus <= 201703L */
+
+#if !(defined(__unix__) || defined(__linux__) || defined(__MACH__))
 	#error "!defined(__unix__) || !defined(__linux__) || !defined(__MACH__): program doesn't support other OSs"
-	#if	 __cplusplus <= 201703L
-		#error "C++20 required"
-	#endif /* __cplusplus <= 201703L */
+#elif defined(_WIN32)
+#error "specifically NOT designed for windows, use linux or unix or darwin(MAC OS) instead"
 #endif /* if OS == unix or linux or mac os */
 
-#if defined(_WIN32)
-#error "specifically NOT designed for windows, use linux or unix or darwin(MAC OS) instead"
-#endif /* if OS == Windows */
 
 // raise when integer too large
 class OneTimePadError : public std::runtime_error {
@@ -287,7 +283,7 @@ void try_combinations(uint32_t *sizes, uint32_t sizes_len, uint32_t &thread_num,
     		     << "\n" << tabs << "for i in range(len(ord_w0[" << thread_num << "])):"
     		     << "\n" << tabs << "    string[i] = ord_w0[" << thread_num << "][i]"
     		     << "\n" << tabs << "    string2[i] = ord_w1[" << thread_num << "][i]"
-    		     << "\n" << tabs << "ind = list(set(indexes))[0] + " << thread_num
+    		     << "\n" << tabs << "ind = list(set(indexes))[0]"
     		     << "\n" << tabs << "for i in range(len(ord_w0[i0])):"
     		     << "\n" << tabs << "    if string[ind+i] == \' \':"
     		     << "\n" << tabs << "        string[ind+i] = ord_w0[i0][i]"
@@ -880,7 +876,7 @@ int main(int argc, char *argv[])
 					continue;
 				}
 		}
-		stop:
+		stop: // exit full loop
 
 
 		// re-calculate sizes since ord_w has been updated
@@ -893,7 +889,7 @@ int main(int argc, char *argv[])
 		// if there is too much data to process give warning/error
 		if(pos_len_thrd > UINT32_MAX) {
 			warning("Data size too large, process may not succeed");
-			if(pos_len_thrd > 0xffffffffffff) { // uint48_t size
+			if(pos_len_thrd > 0xffffffffffff) { // 2^48
 				// in this case, there might be a need for around 200 GB of RAM
 				warning("Data size WAY TOO LARGE. Around 200GB of RAM REQUIRED in total.");
 			}
@@ -902,6 +898,7 @@ int main(int argc, char *argv[])
 		warning("Input too small, no possible word combinations found (ord_w), ordered words not established\nCannot generate possible sentences");
 	}
 
+	// write all output to out folder
 	std::ofstream bigrams_txt;
 	bigrams_txt.open("out/bigrams.txt");
 	bigrams_txt << "bigram count: " << std::dec << possible_bigrams.size() << "\n";
@@ -924,7 +921,7 @@ int main(int argc, char *argv[])
 	// what is the size of every possible_sentence[i]? the array has 2 13 byte values.
 	// 26*memory_to_be_processed, 4,813.4062 MB per thread, running 15 threads use 60 GB of RAM,
 	// but considering that empty ord_w memory allocation uses around 60-75 bytes per member
-	// before initialization, the total memory is 18,698,231,808 bytes which is 18,698.2318 MB MB per thread,
+	// before initialization, the total memory is 18,698,231,808 bytes which is 18,698.2318 MB per thread,
 	// for 15 threads, 280,473,477,120 bytes which is 280,473.4771 MB 
 	std::cout << std::endl << "\033[32;1mPOSSIBLE_BIGRAMS:\t\033[0m";
 	for(uint32_t i=0;i<possible_bigrams.size();i++) {
