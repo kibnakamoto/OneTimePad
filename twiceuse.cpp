@@ -634,7 +634,6 @@ int main(int argc, char *argv[])
 		
 
 		// calculate the amount of every unieqe index
-		delete[] sizes;
 		sizes = unieqe_len(ord_w_ind, sizes_len);
 
 		//////////////// EXTRA ELIMINITAION-PROCESSES TO SAVE MEMORY AND TIME ////////////////
